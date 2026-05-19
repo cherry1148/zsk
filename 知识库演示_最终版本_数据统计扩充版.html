@@ -1,0 +1,3249 @@
+<html lang="zh-CN" data-immersive-translate-page-theme="light"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星枢知识库</title>
+    <link rel="icon" href="https://appsquare-szjz.jyyun.com/apphelper/static/standard/basic-favicon.ico">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 用于 DOCX 预览 -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+
+    <!-- 用于 XLS / XLSX 预览 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- 用于 PPTX 预览：读取 pptx(zip) 中的 slide XML 与图片资源 -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+    <!-- 用于 Markdown 源码 / 渲染预览 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap');
+
+        body { font-family: 'Noto Sans SC', 'Inter', system-ui, sans-serif; }
+        .sidebar-item { transition: all 0.2s; }
+        .sidebar-item:hover { transform: translateX(8px); }
+        .message { max-width: 80%; }
+        .toast-animate { animation: slideUp 0.3s ease; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .file-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .file-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .preview-modal-content {
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .type-tag-pdf { background: #fee2e2; color: #dc2626; }
+        .type-tag-doc { background: #dbeafe; color: #2563eb; }
+        .type-tag-md  { background: #f3e8ff; color: #7c3aed; }
+        .type-tag-url { background: #d1fae5; color: #059669; }
+        .type-tag-vector { background: #ccfbf1; color: #0f766e; }
+        .type-tag-faq { background: #fef3c7; color: #b45309; }
+        .type-tag-xls { background: #dcfce7; color: #15803d; }
+        .type-tag-ppt { background: #ffedd5; color: #ea580c; }
+        .type-tag-default { background: #f3f4f6; color: #6b7280; }
+
+        .modal-glow {
+            background:
+                radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.10), transparent 32%),
+                #ffffff;
+        }
+
+        .upload-zone {
+            background: linear-gradient(145deg, #f8fbff 0%, #f5f7ff 100%);
+            border: 1.5px dashed #bfdbfe;
+            transition: all 0.25s ease;
+        }
+
+        .upload-zone:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 18px 40px -24px rgba(37, 99, 235, 0.45);
+            transform: translateY(-1px);
+        }
+
+        .preview-section-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            padding: 20px;
+            background: #ffffff;
+        }
+
+        .preview-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 14px;
+            vertical-align: top;
+        }
+
+        .preview-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .preview-tab-button {
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            color: #475569;
+            transition: all 0.2s ease;
+        }
+
+        .preview-tab-button.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 10px 24px -18px rgba(37, 99, 235, 0.8);
+        }
+
+        .markdown-rendered {
+            color: #334155;
+            line-height: 1.9;
+        }
+
+        .markdown-rendered h1,
+        .markdown-rendered h2,
+        .markdown-rendered h3 {
+            color: #0f172a;
+            font-weight: 700;
+            margin: 1.2em 0 0.65em;
+            line-height: 1.35;
+        }
+
+        .markdown-rendered h1 { font-size: 1.875rem; }
+        .markdown-rendered h2 { font-size: 1.5rem; }
+        .markdown-rendered h3 { font-size: 1.25rem; }
+
+        .markdown-rendered p { margin: 0.85em 0; }
+        .markdown-rendered ul,
+        .markdown-rendered ol {
+            padding-left: 1.6rem;
+            margin: 0.85em 0;
+        }
+
+        .markdown-rendered ul { list-style: disc; }
+        .markdown-rendered ol { list-style: decimal; }
+        .markdown-rendered li { margin: 0.35em 0; }
+
+        .markdown-rendered blockquote {
+            border-left: 4px solid #93c5fd;
+            background: #eff6ff;
+            padding: 0.75rem 1rem;
+            border-radius: 0 1rem 1rem 0;
+            color: #475569;
+            margin: 1rem 0;
+        }
+
+        .markdown-rendered code {
+            background: #f1f5f9;
+            color: #be123c;
+            border-radius: 0.5rem;
+            padding: 0.12rem 0.35rem;
+            font-size: 0.92em;
+        }
+
+        .markdown-rendered pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 1.25rem;
+            padding: 1rem;
+            overflow: auto;
+            line-height: 1.7;
+            margin: 1rem 0;
+        }
+
+        .markdown-rendered pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .markdown-rendered table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.92rem;
+        }
+
+        .markdown-rendered th,
+        .markdown-rendered td {
+            border: 1px solid #e2e8f0;
+            padding: 0.65rem 0.8rem;
+            text-align: left;
+        }
+
+        .markdown-rendered th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+        }
+
+        .markdown-rendered a {
+            color: #2563eb;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .ppt-slide-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            background: #ffffff;
+            overflow: hidden;
+            box-shadow: 0 18px 40px -34px rgba(15, 23, 42, 0.45);
+        }
+
+        .ppt-slide-header {
+            background: linear-gradient(135deg, #fff7ed, #ffffff);
+            border-bottom: 1px solid #fed7aa;
+            padding: 14px 18px;
+            color: #c2410c;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .ppt-slide-canvas {
+            min-height: 260px;
+            background:
+                linear-gradient(135deg, rgba(251, 146, 60, 0.08), transparent 40%),
+                linear-gradient(315deg, rgba(59, 130, 246, 0.08), transparent 45%),
+                #f8fafc;
+            padding: 22px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .ppt-text-chip {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 12px 14px;
+            color: #334155;
+            line-height: 1.65;
+        }
+
+        .ppt-image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .ppt-image-grid img {
+            width: 100%;
+            max-height: 180px;
+            object-fit: contain;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 8px;
+        }
+
+        .subtle-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+        .subtle-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+        .subtle-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 999px; }
+    </style>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.inset-0{inset:0px}.-right-1{right:-0.25rem}.-top-1{top:-0.25rem}.bottom-6{bottom:1.5rem}.left-4{left:1rem}.right-3{right:0.75rem}.right-6{right:1.5rem}.top-0{top:0px}.top-1\/2{top:50%}.top-3{top:0.75rem}.z-10{z-index:10}.z-50{z-index:50}.z-\[60\]{z-index:60}.z-\[90\]{z-index:90}.mx-4{margin-left:1rem;margin-right:1rem}.mx-auto{margin-left:auto;margin-right:auto}.mb-2{margin-bottom:0.5rem}.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.mr-1{margin-right:0.25rem}.mt-1{margin-top:0.25rem}.mt-10{margin-top:2.5rem}.mt-2{margin-top:0.5rem}.mt-3{margin-top:0.75rem}.mt-4{margin-top:1rem}.mt-6{margin-top:1.5rem}.mt-8{margin-top:2rem}.block{display:block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-12{height:3rem}.h-14{height:3.5rem}.h-2{height:0.5rem}.h-4{height:1rem}.h-8{height:2rem}.h-9{height:2.25rem}.h-full{height:100%}.h-screen{height:100vh}.max-h-\[88vh\]{max-height:88vh}.w-12{width:3rem}.w-2{width:0.5rem}.w-4{width:1rem}.w-5{width:1.25rem}.w-64{width:16rem}.w-8{width:2rem}.w-9{width:2.25rem}.w-\[87\%\]{width:87%}.w-\[94\%\]{width:94%}.w-\[98\%\]{width:98%}.w-full{width:100%}.min-w-0{min-width:0px}.max-w-3xl{max-width:48rem}.max-w-5xl{max-width:64rem}.max-w-md{max-width:28rem}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.-translate-y-1\/2{--tw-translate-y:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite}.cursor-pointer{cursor:pointer}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.grid-cols-4{grid-template-columns:repeat(4, minmax(0, 1fr))}.grid-cols-5{grid-template-columns:repeat(5, minmax(0, 1fr))}.flex-col{flex-direction:column}.items-start{align-items:flex-start}.items-center{align-items:center}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.gap-8{gap:2rem}.space-y-1 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.25rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.space-y-5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.25rem * var(--tw-space-y-reverse))}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.space-y-8 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(2rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(2rem * var(--tw-space-y-reverse))}.divide-y > :not([hidden]) ~ :not([hidden]){--tw-divide-y-reverse:0;border-top-width:calc(1px * calc(1 - var(--tw-divide-y-reverse)));border-bottom-width:calc(1px * var(--tw-divide-y-reverse))}.overflow-auto{overflow:auto}.overflow-hidden{overflow:hidden}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded-full{border-radius:9999px}.rounded-xl{border-radius:0.75rem}.rounded-b-3xl{border-bottom-right-radius:1.5rem;border-bottom-left-radius:1.5rem}.rounded-t-3xl{border-top-left-radius:1.5rem;border-top-right-radius:1.5rem}.rounded-tl-none{border-top-left-radius:0px}.border{border-width:1px}.border-0{border-width:0px}.border-2{border-width:2px}.border-b{border-bottom-width:1px}.border-r{border-right-width:1px}.border-t{border-top-width:1px}.border-dashed{border-style:dashed}.border-gray-100{--tw-border-opacity:1;border-color:rgb(243 244 246 / var(--tw-border-opacity, 1))}.border-gray-200{--tw-border-opacity:1;border-color:rgb(229 231 235 / var(--tw-border-opacity, 1))}.border-gray-300{--tw-border-opacity:1;border-color:rgb(209 213 219 / var(--tw-border-opacity, 1))}.border-transparent{border-color:transparent}.bg-gray-50{--tw-bg-opacity:1;background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))}.bg-amber-100{--tw-bg-opacity:1;background-color:rgb(254 243 199 / var(--tw-bg-opacity, 1))}.bg-black{--tw-bg-opacity:1;background-color:rgb(0 0 0 / var(--tw-bg-opacity, 1))}.bg-black\/50{background-color:rgb(0 0 0 / 0.5)}.bg-black\/70{background-color:rgb(0 0 0 / 0.7)}.bg-blue-100{--tw-bg-opacity:1;background-color:rgb(219 234 254 / var(--tw-bg-opacity, 1))}.bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.bg-emerald-100{--tw-bg-opacity:1;background-color:rgb(209 250 229 / var(--tw-bg-opacity, 1))}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.bg-gray-800{--tw-bg-opacity:1;background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))}.bg-gray-900{--tw-bg-opacity:1;background-color:rgb(17 24 39 / var(--tw-bg-opacity, 1))}.bg-green-100{--tw-bg-opacity:1;background-color:rgb(220 252 231 / var(--tw-bg-opacity, 1))}.bg-green-500{--tw-bg-opacity:1;background-color:rgb(34 197 94 / var(--tw-bg-opacity, 1))}.bg-red-100{--tw-bg-opacity:1;background-color:rgb(254 226 226 / var(--tw-bg-opacity, 1))}.bg-red-500{--tw-bg-opacity:1;background-color:rgb(239 68 68 / var(--tw-bg-opacity, 1))}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-gradient-to-br{background-image:linear-gradient(to bottom right, var(--tw-gradient-stops))}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.from-amber-500{--tw-gradient-from:#f59e0b var(--tw-gradient-from-position);--tw-gradient-to:rgb(245 158 11 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-blue-500{--tw-gradient-from:#3b82f6 var(--tw-gradient-from-position);--tw-gradient-to:rgb(59 130 246 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-emerald-500{--tw-gradient-from:#10b981 var(--tw-gradient-from-position);--tw-gradient-to:rgb(16 185 129 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.to-blue-500{--tw-gradient-to:#3b82f6 var(--tw-gradient-to-position)}.to-indigo-600{--tw-gradient-to:#4f46e5 var(--tw-gradient-to-position)}.to-orange-500{--tw-gradient-to:#f97316 var(--tw-gradient-to-position)}.to-purple-500{--tw-gradient-to:#a855f7 var(--tw-gradient-to-position)}.p-10{padding:2.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.px-10{padding-left:2.5rem;padding-right:2.5rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-8{padding-left:2rem;padding-right:2rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-3{padding-top:0.75rem;padding-bottom:0.75rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-5{padding-top:1.25rem;padding-bottom:1.25rem}.py-6{padding-top:1.5rem;padding-bottom:1.5rem}.pl-10{padding-left:2.5rem}.pl-8{padding-left:2rem}.pr-24{padding-right:6rem}.pr-4{padding-right:1rem}.pt-6{padding-top:1.5rem}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-5xl{font-size:3rem;line-height:1}.text-\[10px\]{font-size:10px}.text-\[15px\]{font-size:15px}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-semibold{font-weight:600}.leading-none{line-height:1}.leading-relaxed{line-height:1.625}.leading-tight{line-height:1.25}.tracking-tight{letter-spacing:-0.025em}.text-gray-800{--tw-text-opacity:1;color:rgb(31 41 55 / var(--tw-text-opacity, 1))}.text-amber-100{--tw-text-opacity:1;color:rgb(254 243 199 / var(--tw-text-opacity, 1))}.text-amber-500{--tw-text-opacity:1;color:rgb(245 158 11 / var(--tw-text-opacity, 1))}.text-amber-700{--tw-text-opacity:1;color:rgb(180 83 9 / var(--tw-text-opacity, 1))}.text-blue-100{--tw-text-opacity:1;color:rgb(219 234 254 / var(--tw-text-opacity, 1))}.text-blue-500{--tw-text-opacity:1;color:rgb(59 130 246 / var(--tw-text-opacity, 1))}.text-blue-600{--tw-text-opacity:1;color:rgb(37 99 235 / var(--tw-text-opacity, 1))}.text-emerald-100{--tw-text-opacity:1;color:rgb(209 250 229 / var(--tw-text-opacity, 1))}.text-emerald-500{--tw-text-opacity:1;color:rgb(16 185 129 / var(--tw-text-opacity, 1))}.text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175 / var(--tw-text-opacity, 1))}.text-gray-500{--tw-text-opacity:1;color:rgb(107 114 128 / var(--tw-text-opacity, 1))}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.text-green-400{--tw-text-opacity:1;color:rgb(74 222 128 / var(--tw-text-opacity, 1))}.text-green-500{--tw-text-opacity:1;color:rgb(34 197 94 / var(--tw-text-opacity, 1))}.text-green-600{--tw-text-opacity:1;color:rgb(22 163 74 / var(--tw-text-opacity, 1))}.text-green-700{--tw-text-opacity:1;color:rgb(21 128 61 / var(--tw-text-opacity, 1))}.text-indigo-400{--tw-text-opacity:1;color:rgb(129 140 248 / var(--tw-text-opacity, 1))}.text-orange-500{--tw-text-opacity:1;color:rgb(249 115 22 / var(--tw-text-opacity, 1))}.text-purple-100{--tw-text-opacity:1;color:rgb(243 232 255 / var(--tw-text-opacity, 1))}.text-purple-500{--tw-text-opacity:1;color:rgb(168 85 247 / var(--tw-text-opacity, 1))}.text-red-500{--tw-text-opacity:1;color:rgb(239 68 68 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.hover\:border-blue-400:hover{--tw-border-opacity:1;border-color:rgb(96 165 250 / var(--tw-border-opacity, 1))}.hover\:bg-amber-200:hover{--tw-bg-opacity:1;background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))}.hover\:bg-black:hover{--tw-bg-opacity:1;background-color:rgb(0 0 0 / var(--tw-bg-opacity, 1))}.hover\:bg-blue-700:hover{--tw-bg-opacity:1;background-color:rgb(29 78 216 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-100:hover{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-50:hover{--tw-bg-opacity:1;background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-800:hover{--tw-bg-opacity:1;background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))}.hover\:text-gray-600:hover{--tw-text-opacity:1;color:rgb(75 85 99 / var(--tw-text-opacity, 1))}.hover\:text-gray-700:hover{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.hover\:text-gray-800:hover{--tw-text-opacity:1;color:rgb(31 41 55 / var(--tw-text-opacity, 1))}.hover\:underline:hover{-webkit-text-decoration-line:underline;text-decoration-line:underline}.hover\:shadow-md:hover{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.focus\:border-blue-300:focus{--tw-border-opacity:1;border-color:rgb(147 197 253 / var(--tw-border-opacity, 1))}.focus\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}.focus\:ring-2:focus{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)}.focus\:ring-blue-300:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(147 197 253 / var(--tw-ring-opacity, 1))}@media (min-width: 640px){.sm\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}}@media (min-width: 1024px){.lg\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}}</style><style>.driver-active .driver-overlay,.driver-active *{pointer-events:none}.driver-active .driver-active-element,.driver-active .driver-active-element *,.driver-popover,.driver-popover *{pointer-events:auto}@keyframes animate-fade-in{0%{opacity:0}to{opacity:1}}.driver-fade .driver-overlay{animation:animate-fade-in .2s ease-in-out}.driver-fade .driver-popover{animation:animate-fade-in .2s}.driver-popover{all:unset;box-sizing:border-box;color:#2d2d2d;margin:0;padding:15px;border-radius:5px;min-width:250px;max-width:300px;box-shadow:0 1px 10px rgba(0,0,0,.4);z-index:1000000000;position:fixed;top:0;right:0;background-color:#fff}.driver-popover *{font-family:Helvetica Neue,Inter,ui-sans-serif,"Apple Color Emoji",Helvetica,Arial,sans-serif}.driver-popover-title{font:19px/normal sans-serif;font-weight:700;display:block;position:relative;line-height:1.5;zoom:1;margin:0}.driver-popover-close-btn{all:unset;position:absolute;top:0;right:0;width:32px;height:28px;cursor:pointer;font-size:18px;font-weight:500;color:#d2d2d2;z-index:1;text-align:center;transition:color;transition-duration:.2s}.driver-popover-close-btn:hover,.driver-popover-close-btn:focus{color:#2d2d2d}.driver-popover-title[style*=block]+.driver-popover-description{margin-top:5px}.driver-popover-description{margin-bottom:0;font:14px/normal sans-serif;line-height:1.5;font-weight:400;zoom:1}.driver-popover-footer{margin-top:15px;text-align:right;zoom:1;display:flex;align-items:center;justify-content:space-between}.driver-popover-progress-text{font-size:13px;font-weight:400;color:#727272;zoom:1}.driver-popover-footer button{all:unset;display:inline-block;box-sizing:border-box;padding:3px 7px;text-decoration:none;text-shadow:1px 1px 0 #fff;background-color:#fff;color:#2d2d2d;font:12px/normal sans-serif;cursor:pointer;outline:0;zoom:1;line-height:1.3;border:1px solid #ccc;border-radius:3px}.driver-popover-footer .driver-popover-btn-disabled{opacity:.5;pointer-events:none}:not(body):has(>.driver-active-element){overflow:hidden !important}.driver-no-interaction,.driver-no-interaction *{pointer-events:none !important}.driver-popover-footer button:hover,.driver-popover-footer button:focus{background-color:#f7f7f7}.driver-popover-navigation-btns{display:flex;flex-grow:1;justify-content:flex-end}.driver-popover-navigation-btns button+button{margin-left:4px}.driver-popover-arrow{content:"";position:absolute;border:5px solid #fff}.driver-popover-arrow-side-over{display:none}.driver-popover-arrow-side-left{left:100%;border-right-color:transparent;border-bottom-color:transparent;border-top-color:transparent}.driver-popover-arrow-side-right{right:100%;border-left-color:transparent;border-bottom-color:transparent;border-top-color:transparent}.driver-popover-arrow-side-top{top:100%;border-right-color:transparent;border-bottom-color:transparent;border-left-color:transparent}.driver-popover-arrow-side-bottom{bottom:100%;border-left-color:transparent;border-top-color:transparent;border-right-color:transparent}.driver-popover-arrow-side-center{display:none}.driver-popover-arrow-side-left.driver-popover-arrow-align-start,.driver-popover-arrow-side-right.driver-popover-arrow-align-start{top:15px}.driver-popover-arrow-side-top.driver-popover-arrow-align-start,.driver-popover-arrow-side-bottom.driver-popover-arrow-align-start{left:15px}.driver-popover-arrow-align-end.driver-popover-arrow-side-left,.driver-popover-arrow-align-end.driver-popover-arrow-side-right{bottom:15px}.driver-popover-arrow-side-top.driver-popover-arrow-align-end,.driver-popover-arrow-side-bottom.driver-popover-arrow-align-end{right:15px}.driver-popover-arrow-side-left.driver-popover-arrow-align-center,.driver-popover-arrow-side-right.driver-popover-arrow-align-center{top:50%;margin-top:-5px}.driver-popover-arrow-side-top.driver-popover-arrow-align-center,.driver-popover-arrow-side-bottom.driver-popover-arrow-align-center{left:50%;margin-left:-5px}.driver-popover-arrow-none{display:none}</style></head>
+
+<body class="bg-gray-50 text-gray-800">
+    <div class="flex h-screen overflow-hidden">
+        <!-- 侧边栏 -->
+        <div class="w-64 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <img data-v-0df93de2="" class="logo" src="https://appsquare-szjz.jyyun.com/apphelper/static/standard/basic-app-logo.png" alt="LOGO" style="width: 50px; height: auto;">
+                    <div>
+                        <h1 class="text-2xl font-semibold tracking-tight">星枢知识库</h1>
+                        <p class="text-xs text-gray-500">智能知识管理平台</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 flex-1 overflow-auto">
+                <nav class="space-y-1">
+                    <a href="#" onclick="switchTab(0)" class="sidebar-item flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-2xl" id="nav-4">
+                        <i class="fa-solid fa-chart-bar w-5"></i><span>数据概览</span>
+                    </a>
+                    <a href="#" onclick="switchTab(1)" class="sidebar-item flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-2xl" id="nav-1">
+                        <i class="fa-solid fa-database w-5"></i><span>知识库管理</span>
+                    </a>
+                    <a href="#" onclick="switchTab(2)" class="sidebar-item flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-2xl" id="nav-2">
+                        <i class="fa-solid fa-comments w-5"></i><span>智能问答</span>
+                    </a>
+
+ 
+                </nav>
+            </div>
+
+            <div class="p-4 border-t">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">张</div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">高等教育演示院校</div>
+                        <div class="text-xs text-gray-500">学校管理员</div>
+                    </div>
+                    <button onclick="logout()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 flex flex-col">
+            <!-- 顶部栏 -->
+            <div class="h-14 bg-white border-b flex items-center px-6 justify-between">
+                <div class="flex items-center gap-4 flex-1">
+                    <div class="relative flex-1 max-w-md">
+                        <input id="global-search" type="text" placeholder="搜索知识库或输入问题..." onkeypress="if(event.key==='Enter') handleGlobalSearch()" class="w-full bg-gray-100 border border-transparent focus:border-blue-300 rounded-3xl py-2 pl-10 pr-4 text-sm focus:outline-none">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-3 text-gray-400"></i>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-6">
+                  
+                  
+                    <button class="relative">
+                        <i class="fa-solid fa-bell text-xl text-gray-500"></i>
+                        <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full">3</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 首页概览 -->
+            <div id="tab-4" class="flex-1 p-8 overflow-auto">
+                <h2 class="text-3xl font-semibold mb-8">欢迎回来，知识库系统</h2>
+
+                <div class="grid grid-cols-4 gap-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm">
+                        <div class="flex justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">总知识条目</p>
+                                <p class="text-4xl font-semibold mt-2">128,459</p>
+                            </div>
+                            <i class="fa-solid fa-book text-4xl text-blue-100"></i>
+                        </div>
+                        <p class="text-green-600 text-sm mt-6">↑ 12% 本月</p>
+                    </div>
+
+                    <div class="bg-white rounded-3xl p-6 shadow-sm">
+                        <div class="flex justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">向量库数量</p>
+                                <p class="text-4xl font-semibold mt-2">7</p>
+                            </div>
+                            <i class="fa-solid fa-database text-4xl text-purple-100"></i>
+                        </div>
+                        <p class="text-green-600 text-sm mt-6">已接入 4 个外部</p>
+                    </div>
+
+                    <div class="bg-white rounded-3xl p-6 shadow-sm">
+                        <div class="flex justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">今日问答</p>
+                                <p class="text-4xl font-semibold mt-2">284</p>
+                            </div>
+                            <i class="fa-solid fa-comments text-4xl text-amber-100"></i>
+                        </div>
+                        <p class="text-green-600 text-sm mt-6">准确率 96.8%</p>
+                    </div>
+
+                    <div class="bg-white rounded-3xl p-6 shadow-sm">
+                        <div class="flex justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">平均响应时间</p>
+                                <p class="text-4xl font-semibold mt-2">0.38s</p>
+                            </div>
+                            <i class="fa-solid fa-bolt text-4xl text-emerald-100"></i>
+                        </div>
+                        <p class="text-gray-500 text-sm mt-6">企业级性能</p>
+                    </div>
+                </div>
+
+                <div class="mt-10">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-plug"></i> 已接入外部知识库
+                    </h3>
+
+                    <div class="grid grid-cols-3 gap-6">
+                        <div class="bg-white border border-gray-100 rounded-3xl p-6 hover:shadow-md transition">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-3xl">📄</div>
+                                <div class="flex-1">
+                                    <div class="font-medium">机电学院制度文档库</div>
+                                    <div class="text-sm text-gray-500">Notion • 已向量化 • 42,391 条</div>
+                                </div>
+                                <span class="text-green-500 text-sm">正常</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-100 rounded-3xl p-6 hover:shadow-md transition">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-3xl">📧</div>
+                                <div class="flex-1">
+                                    <div class="font-medium">邮件知识库</div>
+                                    <div class="text-sm text-gray-500">Exchange • 向量嵌入 • 每日同步</div>
+                                </div>
+                                <span class="text-green-500 text-sm">正常</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-100 rounded-3xl p-6 hover:shadow-md transition">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-3xl">🏢</div>
+                                <div class="flex-1">
+                                    <div class="font-medium">ERP业务数据</div>
+                                    <div class="text-sm text-gray-500">SAP • 结构化向量 • 18,920 条</div>
+                                </div>
+                                <span class="text-green-500 text-sm">正常</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 知识库管理 -->
+            <div id="tab-1" class="flex-1 p-8 overflow-auto hidden">
+                <div id="kb-list-view">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-3xl font-semibold">知识库管理</h2>
+                        <button onclick="showCreateKBModal()" class="px-6 py-3 bg-black text-white rounded-3xl flex items-center gap-2 hover:bg-gray-800">
+                            <i class="fa-solid fa-plus"></i> 创建新知识库
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-3xl overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-5 px-8 text-left">知识库名称</th>
+                                    <th class="py-5 px-8 text-left">文件数量</th>
+                                    <th class="py-5 px-8 text-left">创建时间</th>
+                                    <th class="py-5 px-8 text-left">状态</th>
+                                    <th class="py-5 px-8 text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kb-table-body" class="divide-y"><tr class="hover:bg-gray-50" data-kb-id="kb-default-1">
+                    <td class="py-6 px-8 font-medium">档案管理制度流程</td>
+                    <td class="py-6 px-8 text-gray-500">3</td>
+                    <td class="py-6 px-8 text-gray-500">2025-01-08</td>
+                    <td class="py-6 px-8"><span class="px-4 py-1 bg-green-100 text-green-700 rounded-3xl text-xs">正常</span></td>
+                    <td class="py-6 px-8 text-right">
+                        <button onclick="viewKBDetail('kb-default-1')" class="text-blue-600 hover:underline">查看</button>
+                    </td>
+                </tr><tr class="hover:bg-gray-50" data-kb-id="kb-default-2">
+                    <td class="py-6 px-8 font-medium">招生政策</td>
+                    <td class="py-6 px-8 text-gray-500">4</td>
+                    <td class="py-6 px-8 text-gray-500">2025-02-16</td>
+                    <td class="py-6 px-8"><span class="px-4 py-1 bg-green-100 text-green-700 rounded-3xl text-xs">正常</span></td>
+                    <td class="py-6 px-8 text-right">
+                        <button onclick="viewKBDetail('kb-default-2')" class="text-blue-600 hover:underline">查看</button>
+                    </td>
+                </tr></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="kb-detail-view" class="hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center gap-4">
+                            <button onclick="backToKBList()" class="text-gray-500 hover:text-gray-800 text-xl">
+                                <i class="fa-solid fa-arrow-left"></i>
+                            </button>
+                            <h2 id="detail-kb-name" class="text-3xl font-semibold">知识库名称</h2>
+                        </div>
+
+                        <button onclick="addNewKnowledge()" class="px-6 py-3 bg-blue-600 text-white rounded-3xl flex items-center gap-2 hover:bg-blue-700">
+                            <i class="fa-solid fa-plus"></i> 新增知识
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-3xl p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-medium flex items-center gap-2">
+                                <i class="fa-solid fa-folder-open"></i> 文件列表
+                            </h3>
+                            <span id="file-count" class="text-sm text-gray-500">共 0 项</span>
+                        </div>
+
+                        <div id="file-grid" class="grid grid-cols-5 gap-6"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 智能问答 -->
+            <div id="tab-2" class="flex-1 flex flex-col hidden">
+                <div class="p-8 border-b bg-white">
+                    <h2 class="text-3xl font-semibold">智能问答</h2>
+                    <p class="text-gray-500">支持多知识库联合检索 • 向量相似度匹配 • 来源可追溯</p>
+                </div>
+
+                <div id="chat-area" class="flex-1 p-8 overflow-auto bg-gray-50 space-y-8">
+                    <div class="flex gap-4">
+                        <div class="w-8 h-8 bg-blue-600 rounded-2xl flex-shrink-0 flex items-center justify-center text-white">AI</div>
+                        <div class="message bg-white rounded-3xl rounded-tl-none p-6">您好！我是知识库助手。请问有什么可以帮助您的？</div>
+                    </div>
+                </div>
+
+                <div class="p-6 bg-white border-t">
+                    <div class="relative">
+                        <input id="qa-input" type="text" placeholder="输入您的问题，例如：校园卡挂失补办流程？" onkeypress="if(event.key==='Enter') sendQuestion()" class="w-full bg-gray-100 border-0 focus:ring-2 focus:ring-blue-300 rounded-3xl py-6 pl-8 pr-24 text-base">
+                        <button onclick="sendQuestion()" class="absolute right-3 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-3xl text-sm font-medium">发送提问</button>
+                    </div>
+
+                  
+                </div>
+            </div>
+
+ <!-- 外部接入 -->
+ <div id="tab-3" class="flex-1 p-8 overflow-auto hidden">
+    <div id="external-header" class="mb-6">
+        <h2 class="text-3xl font-semibold">外部知识库接入</h2>
+        <p id="external-context" class="text-sm text-blue-600 mt-1"></p>
+    </div>
+
+    <div class="max-w-5xl mx-auto">
+        <div class="bg-white rounded-3xl p-10">
+            <h3 class="font-semibold text-xl mb-6">选择接入方式</h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+
+                <div onclick="connectCard(this)" data-type="document" class="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-3xl p-6 text-center cursor-pointer transition">
+                    <i class="fa-solid fa-file-upload text-5xl mb-4 text-blue-500"></i>
+                    <div class="font-medium">文档上传</div>
+                    <div class="text-xs text-gray-400 mt-2 leading-tight">支持 pdf、doc、docx、txt、md、csv、xlsx、xls、json、jsonl、ppt、pptx、jpg、jpeg、png、bmp 等格式，单文件不超过 20MB</div>
+                </div>
+
+                <div onclick="connectCard(this)" data-type="web" class="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-3xl p-6 text-center cursor-pointer transition">
+                    <i class="fa-solid fa-globe text-5xl mb-4 text-indigo-400"></i>
+                    <div class="font-medium">Web 网址</div>
+                    <div class="text-sm text-gray-500 mt-1">输入网页 URL 自动抓取</div>
+                </div>
+
+                <div onclick="connectCard(this)" data-type="faq" class="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-3xl p-6 text-center cursor-pointer transition">
+                    <i class="fa-solid fa-circle-question text-5xl mb-4 text-amber-500"></i>
+                    <div class="font-medium">FAQ问答对</div>
+                    <div class="text-xs text-gray-400 mt-2 leading-tight">支持 xls、xlsx、csv 文件上传，可批量录入标准问答知识</div>
+                </div>
+
+                <div onclick="connectCard(this)" data-type="email" class="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-3xl p-6 text-center cursor-pointer transition">
+                    <i class="fa-solid fa-envelope text-5xl mb-4 text-orange-500"></i>
+                    <div class="font-medium">外部知识库</div>
+                    <div class="text-sm text-gray-500 mt-1">飞书/Notion/语雀</div>
+                </div>
+
+                <div onclick="connectCard(this)" data-type="vector" class="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-3xl p-6 text-center cursor-pointer transition">
+                    <i class="fa-solid fa-database text-5xl mb-4 text-emerald-500"></i>
+                    <div class="font-medium">向量数据库</div>
+                    <div class="text-sm text-gray-500 mt-1">Pinecone / Milvus / Weaviate</div>
+                </div>
+
+                <div onclick="connectCard(this)" data-type="notion" class="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-3xl p-6 text-center cursor-pointer transition">
+                    <i class="fa-brands fa-notion text-5xl mb-4 text-purple-500"></i>
+                    <div class="font-medium">自定义API</div>
+                    <div class="text-sm text-gray-500 mt-1">配置自定义 API 接入三方数据库、向量库</div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+
+            <!-- 数据统计 -->
+            <div id="tab-0" class="flex-1 p-8 overflow-auto hidden">
+                <div class="flex justify-between items-start mb-8">
+                    <div>
+                        <h2 class="text-3xl font-semibold">数据统计与分析</h2>
+                        <p class="text-gray-500 mt-2">面向高校知识库运营、师生服务问答与校内业务协同的数据看板</p>
+                    </div>
+
+                    <div class="bg-white border border-gray-100 rounded-3xl px-5 py-3 text-sm text-gray-500 shadow-sm">
+                        <i class="fa-solid fa-calendar-days text-blue-500 mr-2"></i>
+                        统计周期：2025-2026 学年春季学期 · 更新于 09:30
+                    </div>
+                </div>
+
+                <div class="space-y-8">
+                    <!-- 核心指标 -->
+                    <div class="bg-white rounded-3xl p-8 shadow-sm">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 class="text-xl font-semibold">核心运营指标</h3>
+                                <p class="text-sm text-gray-500 mt-1">覆盖教务、招生、学工、图书馆、后勤、就业等高频校园知识服务场景</p>
+                            </div>
+                            <span class="px-4 py-2 bg-blue-100 text-blue-600 rounded-3xl text-sm font-medium">高校知识库总览</span>
+                        </div>
+
+                        <div class="grid grid-cols-4 gap-6">
+                            <div class="border border-gray-100 rounded-3xl p-6 bg-gradient-to-br from-blue-50 to-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="text-gray-500 text-sm">本月师生问答量</p>
+                                        <p class="text-4xl font-semibold mt-3">18,426</p>
+                                    </div>
+                                    <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                                        <i class="fa-solid fa-comments text-xl"></i>
+                                    </div>
+                                </div>
+                                <p class="text-green-600 text-sm mt-5">↑ 15.2% 较上月</p>
+                            </div>
+
+                            <div class="border border-gray-100 rounded-3xl p-6 bg-gradient-to-br from-emerald-50 to-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="text-gray-500 text-sm">知识命中率</p>
+                                        <p class="text-4xl font-semibold mt-3">97.4%</p>
+                                    </div>
+                                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-500 flex items-center justify-center">
+                                        <i class="fa-solid fa-bullseye text-xl"></i>
+                                    </div>
+                                </div>
+                                <p class="text-gray-500 text-sm mt-5">基于 9,832 条有效反馈</p>
+                            </div>
+
+                            <div class="border border-gray-100 rounded-3xl p-6 bg-gradient-to-br from-amber-50 to-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="text-gray-500 text-sm">活跃师生用户</p>
+                                        <p class="text-4xl font-semibold mt-3">6,918</p>
+                                    </div>
+                                    <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-500 flex items-center justify-center">
+                                        <i class="fa-solid fa-users text-xl"></i>
+                                    </div>
+                                </div>
+                                <p class="text-green-600 text-sm mt-5">本科生 72% · 教职工 18%</p>
+                            </div>
+
+                            <div class="border border-gray-100 rounded-3xl p-6 bg-gradient-to-br from-purple-50 to-white">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="text-gray-500 text-sm">平均响应时延</p>
+                                        <p class="text-4xl font-semibold mt-3">0.42s</p>
+                                    </div>
+                                    <div class="w-12 h-12 rounded-2xl bg-blue-100 text-purple-500 flex items-center justify-center">
+                                        <i class="fa-solid fa-bolt text-xl"></i>
+                                    </div>
+                                </div>
+                                <p class="text-gray-500 text-sm mt-5">含召回、重排与生成环节</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-4 gap-6 mt-6">
+                            <div class="border border-gray-100 rounded-3xl p-5">
+                                <p class="text-gray-500 text-sm">已入库校内文件</p>
+                                <p class="text-3xl font-semibold mt-2">12,684</p>
+                                <p class="text-xs text-gray-400 mt-3">制度、流程、培养方案、招生简章</p>
+                            </div>
+
+                            <div class="border border-gray-100 rounded-3xl p-5">
+                                <p class="text-gray-500 text-sm">FAQ 标准问答</p>
+                                <p class="text-3xl font-semibold mt-2">3,276</p>
+                                <p class="text-xs text-gray-400 mt-3">覆盖 16 个校内部门</p>
+                            </div>
+
+                            <div class="border border-gray-100 rounded-3xl p-5">
+                                <p class="text-gray-500 text-sm">待更新知识</p>
+                                <p class="text-3xl font-semibold mt-2">126</p>
+                                <p class="text-amber-500 text-xs mt-3">集中在招生政策与培养方案</p>
+                            </div>
+
+                            <div class="border border-gray-100 rounded-3xl p-5">
+                                <p class="text-gray-500 text-sm">人工转接率</p>
+                                <p class="text-3xl font-semibold mt-2">2.8%</p>
+                                <p class="text-green-600 text-xs mt-3">较上月下降 0.9 个百分点</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 查询趋势与场景分布 -->
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="bg-white rounded-3xl p-8 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-xl font-semibold">近 7 日问答趋势</h3>
+                                    <p class="text-sm text-gray-500 mt-1">按自然日统计师生在知识库中的提问量</p>
+                                </div>
+                                <span class="text-sm text-green-600">周环比 ↑ 11.6%</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>周一 · 教务咨询高峰</span><span class="font-medium">2,184 次</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 74%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>周二 · 招生政策查询</span><span class="font-medium">2,436 次</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 82%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>周三 · 图书馆与校园卡</span><span class="font-medium">2,718 次</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 91%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>周四 · 奖助学金咨询</span><span class="font-medium">2,965 次</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 100%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>周五 · 就业手续办理</span><span class="font-medium">2,326 次</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 78%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>周六 · 后勤服务咨询</span><span class="font-medium">1,694 次</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 57%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>周日 · 学籍与考试安排</span><span class="font-medium">2,103 次</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 71%;"></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-3xl p-8 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-xl font-semibold">业务场景分布</h3>
+                                    <p class="text-sm text-gray-500 mt-1">按知识库分类统计高频咨询方向</p>
+                                </div>
+                                <span class="text-sm text-blue-600">8 类校园服务</span>
+                            </div>
+
+                            <div class="space-y-5">
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>教务管理：选课、成绩、考试、学籍</span><span class="font-medium">28%</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-purple-500" style="width: 92%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>招生咨询：招生计划、录取规则、专业介绍</span><span class="font-medium">18%</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-emerald-500 to-blue-500" style="width: 64%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>学生事务：奖助学金、宿舍、校园卡</span><span class="font-medium">16%</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-amber-500 to-orange-500" style="width: 58%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>图书馆：借阅、电子资源、论文查收查引</span><span class="font-medium">12%</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 44%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>研究生培养：导师双选、开题、中期、答辩</span><span class="font-medium">10%</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-emerald-500 to-blue-500" style="width: 36%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>就业服务：三方协议、招聘会、档案派遣</span><span class="font-medium">8%</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-amber-500 to-orange-500" style="width: 29%;"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>信息化与后勤：网络、维修、餐饮、门禁</span><span class="font-medium">8%</span></div>
+                                    <div class="h-3 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-500 to-purple-500" style="width: 29%;"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 高频问题与学院排行 -->
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="bg-white rounded-3xl p-8 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-xl font-semibold">最常被查询问题 Top 10</h3>
+                                    <p class="text-sm text-gray-500 mt-1">用于识别师生服务热点并反向优化知识库</p>
+                                </div>
+                                <i class="fa-solid fa-ranking-star text-2xl text-amber-500"></i>
+                            </div>
+
+                            <ul class="space-y-4 text-sm">
+                                <li class="flex justify-between items-center border-b border-gray-100 pb-3">
+                                    <span><span class="text-gray-400 mr-2">01</span> 转专业申请条件和办理时间是什么？</span>
+                                    <span class="text-blue-600 font-medium">842 次</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-gray-100 pb-3">
+                                    <span><span class="text-gray-400 mr-2">02</span> 2026 年本科招生计划如何查询？</span>
+                                    <span class="text-blue-600 font-medium">786 次</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-gray-100 pb-3">
+                                    <span><span class="text-gray-400 mr-2">03</span> 选课冲突或课程容量已满怎么办？</span>
+                                    <span class="text-blue-600 font-medium">693 次</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-gray-100 pb-3">
+                                    <span><span class="text-gray-400 mr-2">04</span> 奖学金评定需要满足哪些条件？</span>
+                                    <span class="text-blue-600 font-medium">628 次</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-gray-100 pb-3">
+                                    <span><span class="text-gray-400 mr-2">05</span> 图书馆电子资源校外如何访问？</span>
+                                    <span class="text-blue-600 font-medium">574 次</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-gray-100 pb-3">
+                                    <span><span class="text-gray-400 mr-2">06</span> 校园卡挂失补办流程是什么？</span>
+                                    <span class="text-blue-600 font-medium">533 次</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-gray-100 pb-3">
+                                    <span><span class="text-gray-400 mr-2">07</span> 研究生开题报告需要提交哪些材料？</span>
+                                    <span class="text-blue-600 font-medium">486 次</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-gray-100 pb-3">
+                                    <span><span class="text-gray-400 mr-2">08</span> 宿舍报修在哪里提交？</span>
+                                    <span class="text-blue-600 font-medium">421 次</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-gray-100 pb-3">
+                                    <span><span class="text-gray-400 mr-2">09</span> 就业协议和档案派遣如何办理？</span>
+                                    <span class="text-blue-600 font-medium">398 次</span>
+                                </li>
+                                <li class="flex justify-between items-center">
+                                    <span><span class="text-gray-400 mr-2">10</span> 心理咨询预约是否会保密？</span>
+                                    <span class="text-blue-600 font-medium">365 次</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white rounded-3xl p-8 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-xl font-semibold">学院与部门使用排行</h3>
+                                    <p class="text-sm text-gray-500 mt-1">按提问量、命中率和满意度综合观察推广效果</p>
+                                </div>
+                                <i class="fa-solid fa-building-columns text-2xl text-blue-500"></i>
+                            </div>
+
+                            <div class="overflow-auto subtle-scroll">
+                                <table class="preview-table w-full text-sm min-w-[720px]">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-left">单位</th>
+                                            <th class="text-left">提问量</th>
+                                            <th class="text-left">命中率</th>
+                                            <th class="text-left">满意度</th>
+                                            <th class="text-left">主要场景</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="font-medium">计算机学院</td>
+                                            <td>2,386</td>
+                                            <td class="text-green-600">98.1%</td>
+                                            <td>4.8/5</td>
+                                            <td>培养方案、实验室安全</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-medium">机电工程学院</td>
+                                            <td>2,074</td>
+                                            <td class="text-green-600">97.6%</td>
+                                            <td>4.7/5</td>
+                                            <td>课程选修、实习实践</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-medium">教务处</td>
+                                            <td>1,965</td>
+                                            <td class="text-green-600">98.4%</td>
+                                            <td>4.9/5</td>
+                                            <td>选课、成绩、考试安排</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-medium">学生工作部</td>
+                                            <td>1,734</td>
+                                            <td class="text-green-600">96.9%</td>
+                                            <td>4.7/5</td>
+                                            <td>奖助学金、心理咨询</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-medium">招生就业处</td>
+                                            <td>1,628</td>
+                                            <td class="text-green-600">96.2%</td>
+                                            <td>4.6/5</td>
+                                            <td>招生政策、就业手续</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-medium">图书馆</td>
+                                            <td>1,283</td>
+                                            <td class="text-green-600">97.9%</td>
+                                            <td>4.8/5</td>
+                                            <td>借阅、电子资源</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 健康度、知识更新与服务闭环 -->
+                    <div class="grid grid-cols-3 gap-8">
+                        <div class="bg-white rounded-3xl p-8 shadow-sm">
+                            <h3 class="text-xl font-semibold mb-6">知识库健康度</h3>
+
+                            <div class="space-y-6">
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>培养方案覆盖率</span><span class="font-medium">96%</span></div>
+                                    <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-blue-500 to-purple-500" style="width: 96%;"></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>政策文件向量化完成率</span><span class="font-medium">98%</span></div>
+                                    <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-emerald-500 to-blue-500" style="width: 98%;"></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>FAQ 可用率</span><span class="font-medium">95%</span></div>
+                                    <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 95%;"></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>过期知识清理率</span><span class="font-medium">89%</span></div>
+                                    <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-amber-500 to-orange-500" style="width: 89%;"></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between text-sm mb-2"><span>来源可追溯率</span><span class="font-medium">93%</span></div>
+                                    <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-emerald-500 to-blue-500" style="width: 93%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-3xl p-8 shadow-sm">
+                            <h3 class="text-xl font-semibold mb-6">知识更新待办</h3>
+
+                            <div class="space-y-4">
+                                <div class="border border-amber-100 bg-amber-50 rounded-3xl p-4">
+                                    <div class="flex justify-between items-start gap-4">
+                                        <div>
+                                            <p class="font-medium">2026 本科招生章程</p>
+                                            <p class="text-sm text-gray-500 mt-1">建议招生就业处 3 日内完成更新</p>
+                                        </div>
+                                        <span class="px-3 py-1 bg-white text-amber-600 rounded-2xl text-xs">高优先级</span>
+                                    </div>
+                                </div>
+
+                                <div class="border border-blue-100 bg-blue-50 rounded-3xl p-4">
+                                    <div class="flex justify-between items-start gap-4">
+                                        <div>
+                                            <p class="font-medium">通识选修课目录</p>
+                                            <p class="text-sm text-gray-500 mt-1">存在 14 门课程容量信息待同步</p>
+                                        </div>
+                                        <span class="px-3 py-1 bg-white text-blue-600 rounded-2xl text-xs">教务处</span>
+                                    </div>
+                                </div>
+
+                                <div class="border border-emerald-100 bg-emerald-50 rounded-3xl p-4">
+                                    <div class="flex justify-between items-start gap-4">
+                                        <div>
+                                            <p class="font-medium">研究生奖助体系说明</p>
+                                            <p class="text-sm text-gray-500 mt-1">需补充博士生专项资助条款</p>
+                                        </div>
+                                        <span class="px-3 py-1 bg-white text-emerald-600 rounded-2xl text-xs">研究生院</span>
+                                    </div>
+                                </div>
+
+                                <div class="border border-gray-100 bg-gray-50 rounded-3xl p-4">
+                                    <div class="flex justify-between items-start gap-4">
+                                        <div>
+                                            <p class="font-medium">图书馆暑期开放时间</p>
+                                            <p class="text-sm text-gray-500 mt-1">建议在期末周前发布并同步 FAQ</p>
+                                        </div>
+                                        <span class="px-3 py-1 bg-white text-gray-600 rounded-2xl text-xs">待确认</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-3xl p-8 shadow-sm">
+                            <h3 class="text-xl font-semibold mb-6">服务闭环分析</h3>
+
+                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                <div class="rounded-3xl bg-gray-50 p-5 text-center">
+                                    <div class="text-3xl font-semibold text-green-600">4.7</div>
+                                    <div class="text-xs text-gray-500 mt-1">平均满意度</div>
+                                </div>
+                                <div class="rounded-3xl bg-gray-50 p-5 text-center">
+                                    <div class="text-3xl font-semibold text-blue-600">91%</div>
+                                    <div class="text-xs text-gray-500 mt-1">一次解决率</div>
+                                </div>
+                                <div class="rounded-3xl bg-gray-50 p-5 text-center">
+                                    <div class="text-3xl font-semibold text-amber-500">216</div>
+                                    <div class="text-xs text-gray-500 mt-1">待人工复核</div>
+                                </div>
+                                <div class="rounded-3xl bg-gray-50 p-5 text-center">
+                                    <div class="text-3xl font-semibold text-gray-800">38</div>
+                                    <div class="text-xs text-gray-500 mt-1">新增知识建议</div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4 text-sm">
+                                <div class="flex items-start gap-3">
+                                    <i class="fa-solid fa-circle-check text-green-500 mt-1"></i>
+                                    <p class="text-gray-600">教务类问答命中率最高，建议继续沉淀选课、补考、缓考等细分 FAQ。</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <i class="fa-solid fa-circle-exclamation text-amber-500 mt-1"></i>
+                                    <p class="text-gray-600">招生政策存在季节性峰值，需提前更新招生章程、专业目录和咨询口径。</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <i class="fa-solid fa-lightbulb text-blue-500 mt-1"></i>
+                                    <p class="text-gray-600">后勤报修、校园卡和网络服务可与工单系统联动，提升服务闭环效率。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 热点专题与渠道来源 -->
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="bg-white rounded-3xl p-8 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-xl font-semibold">本周热点专题</h3>
+                                    <p class="text-sm text-gray-500 mt-1">根据问答增长率、低命中问题和人工转接记录生成</p>
+                                </div>
+                                <span class="px-4 py-2 bg-emerald-100 text-emerald-600 rounded-3xl text-sm">自动识别</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="border border-gray-100 rounded-3xl p-5">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-graduation-cap"></i></div>
+                                        <div class="font-medium">期末考试安排</div>
+                                    </div>
+                                    <p class="text-sm text-gray-500 leading-relaxed">咨询量较上周增长 32%，集中在考试时间、考试地点、缓考申请。</p>
+                                </div>
+
+                                <div class="border border-gray-100 rounded-3xl p-5">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-500 flex items-center justify-center"><i class="fa-solid fa-award"></i></div>
+                                        <div class="font-medium">奖助学金评审</div>
+                                    </div>
+                                    <p class="text-sm text-gray-500 leading-relaxed">学生关注综合测评、困难认定、国家奖学金材料提交节点。</p>
+                                </div>
+
+                                <div class="border border-gray-100 rounded-3xl p-5">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-500 flex items-center justify-center"><i class="fa-solid fa-book-open-reader"></i></div>
+                                        <div class="font-medium">毕业论文答辩</div>
+                                    </div>
+                                    <p class="text-sm text-gray-500 leading-relaxed">毕业班学生集中查询查重标准、答辩流程和材料归档要求。</p>
+                                </div>
+
+                                <div class="border border-gray-100 rounded-3xl p-5">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <div class="w-10 h-10 rounded-2xl bg-red-100 text-red-500 flex items-center justify-center"><i class="fa-solid fa-shield-halved"></i></div>
+                                        <div class="font-medium">实验室安全准入</div>
+                                    </div>
+                                    <p class="text-sm text-gray-500 leading-relaxed">新入组学生询问安全考试、危化品领用和设备操作授权。</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-3xl p-8 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-xl font-semibold">访问渠道来源</h3>
+                                    <p class="text-sm text-gray-500 mt-1">识别师生主要入口，优化知识库触达路径</p>
+                                </div>
+                                <i class="fa-solid fa-route text-2xl text-indigo-400"></i>
+                            </div>
+
+                            <div class="space-y-5">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-28 text-sm text-gray-600">学校门户</div>
+                                    <div class="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style="width: 42%;"></div>
+                                    </div>
+                                    <div class="w-16 text-right text-sm font-medium">42%</div>
+                                </div>
+
+                                <div class="flex items-center gap-4">
+                                    <div class="w-28 text-sm text-gray-600">移动校园 App</div>
+                                    <div class="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-emerald-500 to-blue-500" style="width: 31%;"></div>
+                                    </div>
+                                    <div class="w-16 text-right text-sm font-medium">31%</div>
+                                </div>
+
+                                <div class="flex items-center gap-4">
+                                    <div class="w-28 text-sm text-gray-600">微信公众号</div>
+                                    <div class="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-amber-500 to-orange-500" style="width: 16%;"></div>
+                                    </div>
+                                    <div class="w-16 text-right text-sm font-medium">16%</div>
+                                </div>
+
+                                <div class="flex items-center gap-4">
+                                    <div class="w-28 text-sm text-gray-600">教务系统</div>
+                                    <div class="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-blue-500 to-purple-500" style="width: 8%;"></div>
+                                    </div>
+                                    <div class="w-16 text-right text-sm font-medium">8%</div>
+                                </div>
+
+                                <div class="flex items-center gap-4">
+                                    <div class="w-28 text-sm text-gray-600">线下服务台</div>
+                                    <div class="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-gray-500 to-gray-800" style="width: 3%;"></div>
+                                    </div>
+                                    <div class="w-16 text-right text-sm font-medium">3%</div>
+                                </div>
+                            </div>
+
+                            <div class="mt-8 rounded-3xl bg-gray-50 p-5">
+                                <p class="font-medium mb-2">运营建议</p>
+                                <p class="text-sm text-gray-500 leading-relaxed">建议在移动校园 App 首页增加“选课、成绩、校园卡、宿舍报修”快捷问答入口，并在招生季将招生知识库置顶展示。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+     </div>
+
+    <!-- 创建知识库模态框 -->
+    <div id="create-kb-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-3xl w-full max-w-md mx-4 p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-semibold">创建新知识库</h3>
+                <button onclick="closeCreateKBModal()" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium mb-2">知识库名称 <span class="text-red-500">*</span></label>
+                <input id="new-kb-name" type="text" placeholder="例如：研发知识库" class="w-full bg-gray-100 border-0 rounded-3xl px-5 py-3 focus:ring-2 focus:ring-blue-300 text-sm" autofocus="">
+            </div>
+
+            <div class="flex justify-end gap-4">
+                <button onclick="closeCreateKBModal()" class="px-8 py-3 border rounded-3xl text-gray-700 hover:bg-gray-50">取消</button>
+                <button onclick="confirmCreateKB()" class="px-10 py-3 bg-blue-600 text-white rounded-3xl hover:bg-blue-700 font-medium">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 外部接入配置模态框 -->
+    <div id="config-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="modal-glow rounded-3xl w-full max-w-3xl mx-4 p-8 max-h-[88vh] overflow-auto shadow-2xl subtle-scroll">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 id="modal-title" class="text-2xl font-semibold">配置外部接入</h3>
+                    <p id="modal-subtitle" class="text-sm text-gray-500 mt-2"></p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="faq-template-btn" onclick="downloadFAQTemplate()" class="hidden px-4 py-2 bg-amber-100 text-amber-700 rounded-3xl text-sm font-medium hover:bg-amber-200">
+                        <i class="fa-solid fa-download mr-1"></i>下载模板
+                    </button>
+                    <button onclick="closeConfigModal()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+                </div>
+            </div>
+
+            <div id="config-fields" class="space-y-5"></div>
+
+            <div class="flex justify-end gap-4 mt-8">
+                <button onclick="closeConfigModal()" class="px-8 py-3 border rounded-3xl text-gray-700 hover:bg-gray-50">取消</button>
+                <button onclick="confirmConfig()" class="px-10 py-3 bg-blue-600 text-white rounded-3xl hover:bg-blue-700 font-medium">确认接入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文档预览模态框 -->
+    <div id="preview-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
+        <div class="bg-white rounded-3xl w-full max-w-5xl mx-4 preview-modal-content shadow-2xl subtle-scroll">
+            <div class="flex justify-between items-center border-b px-8 py-5 sticky top-0 bg-white rounded-t-3xl z-10">
+                <div class="flex items-center gap-3 min-w-0">
+                    <i id="preview-icon" class="text-2xl text-blue-500 flex-shrink-0"></i>
+                    <h3 id="preview-title" class="text-xl font-semibold truncate">文档预览</h3>
+                </div>
+                <button onclick="closePreviewModal()" class="text-3xl text-gray-400 hover:text-gray-600 leading-none">×</button>
+            </div>
+
+            <div id="preview-content" class="p-8 text-gray-700 leading-relaxed text-[15px]"></div>
+
+            <div class="p-6 border-t flex justify-end bg-gray-50 rounded-b-3xl">
+                <button onclick="closePreviewModal()" class="px-8 py-3 border rounded-3xl text-gray-700 hover:bg-gray-100">关闭预览</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-gray-800 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-3 toast-animate z-[90] hidden" style="transform: translateY(80px);">
+        <i class="fa-solid fa-check-circle text-green-400"></i>
+        <span id="toast-text">欢迎使用企业知识库系统</span>
+    </div>
+
+    <script>
+        // ==================== 全局数据 ====================
+        const fixedWebPreviewContent = {
+            title: '科大讯飞股份有限公司',
+            sourceName: '百科词条内容',
+            paragraphs: [
+                '科大讯飞股份有限公司，股票简称科大讯飞，股票代码 002230，由刘庆峰于 1999 年创建，总部位于中国合肥，是一家主营智能语音与人工智能业务的股份有限公司。公司长期从事智能语音、自然语言理解、机器学习推理、自主学习等人工智能核心技术研究，并推动人工智能技术在教育、医疗、政务、企业服务、汽车、消费者产品等多个行业场景落地。',
+                '公司早期以中文语音技术为核心能力，逐步形成语音识别、语音合成、语义理解、机器翻译、知识图谱、认知智能等技术体系。2000 年，科大讯飞推出“畅言 2000”语音平台；2008 年在深圳证券交易所挂牌上市；2010 年发布讯飞开放平台，为开发者和企业客户提供语音及人工智能能力接口。',
+                '在产业布局方面，科大讯飞围绕人工智能核心能力，持续建设面向教育、医疗、城市治理、办公协同、工业与消费者终端的产品体系。公司推出过讯飞输入法、讯飞听见、讯飞翻译机、智能办公本、学习机、智慧教育平台、智慧医疗解决方案、企业数字化平台等产品与服务。',
+                '科大讯飞是国家新一代人工智能开放创新平台建设单位之一，也是语音及语言信息处理相关国家工程实验室、重点实验室的重要参与单位。公司在智能语音、自然语言处理、认知智能等方向持续参与标准制定、技术评测和产业化应用。',
+                '2023 年，科大讯飞发布讯飞星火认知大模型，围绕文本生成、语言理解、知识问答、逻辑推理、数学能力、代码能力、多模态交互等方向持续升级，并将大模型能力接入教育、办公、医疗、汽车、企业服务等业务场景。',
+                '公司发展历程中，智能语音技术一直是核心技术底座。随着大模型、算力平台和行业知识工程的发展，科大讯飞进一步将通用人工智能能力与行业知识库、企业数据、业务流程结合，为企业客户提供知识问答、智能办公、智能客服、智能质检、内容生成和数据分析等能力。',
+                '在资本市场方面，科大讯飞为 A 股上市公司，股票代码为 002230。公司营收结构覆盖教育产品和服务、开放平台及消费者业务、智慧城市、运营商、汽车智能化、智慧医疗、企业数字化等多个领域。'
+            ],
+            timeline: [
+                ['1999年', '公司成立，总部位于安徽合肥。'],
+                ['2000年', '推出“畅言 2000”语音平台。'],
+                ['2008年', '在深圳证券交易所挂牌上市，股票代码 002230。'],
+                ['2010年', '发布讯飞开放平台。'],
+                ['2016年', '推出讯飞翻译机等智能硬件产品。'],
+                ['2021年', '发布讯飞企业数字化平台。'],
+                ['2023年', '发布讯飞星火认知大模型。']
+            ],
+            business: [
+                '智能语音与语言处理',
+                '认知智能与大模型',
+                '智慧教育',
+                '智慧医疗',
+                '智慧城市',
+                '智能办公',
+                '企业数字化',
+                '智能汽车与消费者终端'
+            ]
+        };
+
+        const vectorPreviewRows = [
+            { id: 'vec-0001', title: '本科培养方案', category: '教务管理', content: '本科培养方案由通识教育、学科基础、专业核心、专业选修和实践教学环节组成，学生应在规定学习年限内完成培养计划要求的学分。', score: 0.982 },
+            { id: 'vec-0002', title: '课程选课规则', category: '教务管理', content: '学生应在选课开放期间通过教务系统完成课程选择，专业必修课优先保障本专业学生修读需求，跨专业选修课程按容量开放。', score: 0.976 },
+            { id: 'vec-0003', title: '学籍异动办理', category: '学生事务', content: '休学、复学、转专业、保留学籍等事项应由学生本人发起申请，经学院审核后报学校相关部门审批备案。', score: 0.971 },
+            { id: 'vec-0004', title: '奖学金评定', category: '学生发展', content: '奖学金评定综合考察学生思想品德、学习成绩、科研创新、社会实践和综合表现，具体比例以当年通知为准。', score: 0.968 },
+            { id: 'vec-0005', title: '图书馆借阅', category: '图书馆', content: '学生可凭校园卡借阅图书，普通图书借阅期限为 30 天，到期前可在图书馆系统中办理续借。', score: 0.964 },
+            { id: 'vec-0006', title: '电子资源访问', category: '图书馆', content: '校外访问图书馆电子资源时，应通过学校统一身份认证系统登录远程访问服务，严禁批量下载和账号转借。', score: 0.958 },
+            { id: 'vec-0007', title: '实验室安全', category: '实验管理', content: '进入实验室前必须完成安全教育与准入考试，涉及危化品、高压设备、激光设备的实验需严格执行操作规程。', score: 0.953 },
+            { id: 'vec-0008', title: '研究生开题', category: '研究生培养', content: '研究生应在导师指导下完成开题报告，开题内容包括研究背景、研究目标、技术路线、进度安排和预期成果。', score: 0.949 },
+            { id: 'vec-0009', title: '导师双选', category: '研究生培养', content: '研究生导师双选应遵循学生志愿、导师确认和学院统筹的原则，双选结果经学院审核后生效。', score: 0.943 },
+            { id: 'vec-0010', title: '毕业论文管理', category: '教学质量', content: '毕业论文应经过选题、开题、中期检查、论文撰写、查重、评阅和答辩等环节，过程材料需在系统中完整归档。', score: 0.939 },
+            { id: 'vec-0011', title: '校园卡服务', category: '校园服务', content: '校园卡可用于门禁、消费、借阅和身份识别，遗失后应及时挂失并到校园卡服务中心申请补办。', score: 0.934 },
+            { id: 'vec-0012', title: '宿舍管理', category: '后勤服务', content: '学生住宿应遵守宿舍管理规定，严禁使用违规电器，晚归、调宿和维修申请可通过学生服务平台办理。', score: 0.929 },
+            { id: 'vec-0013', title: '校园网络', category: '信息化服务', content: '校园网账号与统一身份认证账号绑定，学生可在信息门户中查看流量套餐、修改密码和提交网络故障工单。', score: 0.925 },
+            { id: 'vec-0014', title: '创新创业实践', category: '实践教学', content: '学校鼓励学生参加创新创业训练计划、学科竞赛、科研项目和社会实践，成果可按规定认定创新实践学分。', score: 0.921 },
+            { id: 'vec-0015', title: '考试纪律', category: '教务管理', content: '学生应携带有效证件参加考试，严禁夹带资料、替考、抄袭、使用通讯设备等违反考试纪律的行为。', score: 0.916 },
+            { id: 'vec-0016', title: '成绩复核', category: '教务管理', content: '学生对课程成绩有异议时，可在规定期限内提交成绩复核申请，由开课单位组织核查并反馈结果。', score: 0.912 },
+            { id: 'vec-0017', title: '国际交流项目', category: '国际合作', content: '学校国际交流项目包括交换学习、联合培养、暑期课程和海外实习，申请人需满足语言成绩和学业成绩要求。', score: 0.908 },
+            { id: 'vec-0018', title: '就业指导服务', category: '就业服务', content: '就业指导中心为学生提供职业测评、简历优化、面试辅导、招聘信息发布和就业手续办理等服务。', score: 0.904 },
+            { id: 'vec-0019', title: '心理咨询预约', category: '学生支持', content: '学生可通过心理健康教育中心预约个体咨询，咨询内容遵循保密原则，危机干预情形按学校相关流程处理。', score: 0.899 },
+            { id: 'vec-0020', title: '校内会议室预约', category: '行政服务', content: '校内会议室预约应填写使用时间、参会人数、设备需求和责任人信息，审核通过后方可使用。', score: 0.895 }
+        ];
+
+        const faqPreviewRows = [
+            ['如何申请校园卡补办？', '登录校园服务平台提交补办申请，完成缴费后到指定服务窗口领取新卡。', '校园服务'],
+            ['图书馆电子资源如何校外访问？', '通过学校统一身份认证登录 VPN 或图书馆远程访问系统后即可使用。', '图书馆'],
+            ['选课冲突如何处理？', '先在教务系统查看可替代课程，仍无法解决时联系学院教学秘书登记处理。', '教务管理'],
+            ['成绩有异议怎么办？', '在成绩公布后的规定期限内提交成绩复核申请，由开课单位完成核查。', '教务管理'],
+            ['如何预约心理咨询？', '进入学生服务平台选择心理咨询预约，填写时间偏好和咨询主题后提交。', '学生支持']
+        ];
+
+        const sampleMarkdownContent = `# 技术白皮书 V3.2
+
+> 本文档用于演示 Markdown 文档在知识库中的双模式预览能力：可查看原始 Markdown 源码，也可查看前端渲染后的阅读视图。
+
+## 1. 产品架构
+
+KnowledgeHub 的知识处理链路包括：
+
+- 文档接入：支持本地文件、网页、FAQ、向量数据库与外部系统。
+- 内容解析：根据文件类型提取正文、表格、图片或幻灯片内容。
+- 语义切分：按标题、段落、页码或幻灯片维度生成知识片段。
+- 向量入库：生成 Embedding 后写入企业向量索引。
+- 智能问答：结合召回、重排与来源追踪生成答案。
+
+## 2. Markdown 能力说明
+
+| 能力 | 说明 |
+| --- | --- |
+| 源码模式 | 保留原始 Markdown 文本，便于排查格式、链接和代码块 |
+| 预览模式 | 使用前端 Markdown 渲染器展示标题、表格、引用、列表和代码块 |
+| 安全处理 | 渲染内容经过 HTML 清洗，降低脚本注入风险 |
+
+## 3. 示例代码
+
+\`\`\`js
+function chunkDocument(text) {
+    return text
+        .split(/\n{2,}/)
+        .filter(Boolean)
+        .map((content, index) => ({ id: index + 1, content }));
+}
+\`\`\`
+
+## 4. 检索建议
+
+为提升问答质量，建议在文档中保持稳定的标题层级，并为关键表格补充文字说明。`;
+
+        const knowledgeBases = {
+            'kb-default-1': {
+                name: '公司制度与流程',
+                createdAt: '2025-01-08',
+                files: [
+                    { id: 1, name: '员工手册.pdf', type: 'pdf', size: '2.3 MB', status: '已解析' },
+                    { id: 2, name: '2024年制度修订.docx', type: 'docx', size: '156 KB', status: '已解析' },
+                    { id: 3, name: '考勤规定.pdf', type: 'pdf', size: '890 KB', status: '已解析' }
+                ]
+            },
+            'kb-default-2': {
+                name: '产品技术规格',
+                createdAt: '2025-02-16',
+                files: [
+                    { id: 4, name: '产品规格V3.2.pdf', type: 'pdf', size: '4.1 MB', status: '已解析' },
+                    { id: 5, name: '技术白皮书.md', type: 'md', size: '34 KB', status: '已解析' },
+                    {
+                        id: 6,
+                        name: '科大讯飞股份有限公司',
+                        type: 'url',
+                        size: '',
+                        status: '已解析',
+                        sourceUrl: 'https://baike.baidu.com/item/%E7%A7%91%E5%A4%A7%E8%AE%AF%E9%A3%9E%E8%82%A1%E4%BB%BD%E6%9C%89%E9%99%90%E5%85%AC%E5%8F%B8/15080951'
+                    },
+                    {
+                        id: 7,
+                        name: 'Milvus: university-knowledge-index',
+                        type: 'vector',
+                        size: '20 条片段',
+                        status: '已解析',
+                        vectorProvider: 'Milvus',
+                        vectorIndex: 'university-knowledge-index'
+                    }
+                ]
+            }
+        };
+
+        let currentKBId = null;
+        let pendingAddFromKB = false;
+        let currentConfigType = '';
+
+        // ==================== 工具函数 ====================
+        function escapeHTML(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function getTypeTagClass(type) {
+            const t = String(type || '').toLowerCase();
+            if (t === 'pdf') return 'type-tag-pdf';
+            if (t === 'doc' || t === 'docx') return 'type-tag-doc';
+            if (t === 'md') return 'type-tag-md';
+            if (t === 'url') return 'type-tag-url';
+            if (t === 'vector') return 'type-tag-vector';
+            if (t === 'faq') return 'type-tag-faq';
+            if (t === 'xls' || t === 'xlsx' || t === 'csv') return 'type-tag-xls';
+            if (t === 'ppt' || t === 'pptx') return 'type-tag-ppt';
+            return 'type-tag-default';
+        }
+
+        function getFileIconClass(type) {
+            const t = String(type || '').toLowerCase();
+            if (t === 'url') return 'fa-solid fa-link text-indigo-400';
+            if (t === 'pdf') return 'fa-solid fa-file-pdf text-red-500';
+            if (t === 'doc' || t === 'docx') return 'fa-solid fa-file-word text-blue-500';
+            if (t === 'md') return 'fa-brands fa-markdown text-purple-500';
+            if (t === 'vector') return 'fa-solid fa-database text-emerald-500';
+            if (t === 'faq') return 'fa-solid fa-circle-question text-amber-500';
+            if (t === 'xls' || t === 'xlsx' || t === 'csv') return 'fa-solid fa-file-excel text-green-600';
+            if (t === 'ppt' || t === 'pptx') return 'fa-solid fa-file-powerpoint text-orange-500';
+            if (['jpg', 'jpeg', 'png', 'bmp', 'gif', 'webp'].includes(t)) return 'fa-solid fa-file-image text-pink-500';
+            if (['json', 'jsonl'].includes(t)) return 'fa-solid fa-code text-slate-500';
+            return 'fa-solid fa-file text-gray-500';
+        }
+
+        function getTypeLabel(type) {
+            const t = String(type || '').toLowerCase();
+            if (t === 'url') return 'URL';
+            if (t === 'vector') return '向量库';
+            if (t === 'faq') return 'FAQ';
+            if (t === 'md') return 'MD';
+            if (t === 'ppt' || t === 'pptx') return 'PPT';
+            return t ? t.toUpperCase() : 'FILE';
+        }
+
+        function getTypeTagHTML(type) {
+            return `<span class="inline-block px-3 py-1 text-xs font-medium rounded-2xl ${getTypeTagClass(type)}">${getTypeLabel(type)}</span>`;
+        }
+
+        function bytesToSize(size) {
+            if (!size && size !== 0) return '';
+            if (size >= 1024 * 1024) return (size / 1024 / 1024).toFixed(1) + ' MB';
+            return (size / 1024).toFixed(1) + ' KB';
+        }
+
+        function showToast(text, duration = 2500) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').innerText = text;
+            toast.classList.remove('hidden');
+            toast.style.transform = 'translateY(0)';
+
+            setTimeout(() => {
+                toast.style.transform = 'translateY(80px)';
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, duration);
+        }
+
+        // ==================== 知识库管理 ====================
+        function showCreateKBModal() {
+            document.getElementById('create-kb-modal').classList.remove('hidden');
+            document.getElementById('new-kb-name').value = '';
+            setTimeout(() => document.getElementById('new-kb-name').focus(), 50);
+        }
+
+        function closeCreateKBModal() {
+            document.getElementById('create-kb-modal').classList.add('hidden');
+        }
+
+        function confirmCreateKB() {
+            const name = document.getElementById('new-kb-name').value.trim();
+
+            if (!name) {
+                showToast('请输入知识库名称', 2000);
+                return;
+            }
+
+            const id = 'kb-' + Date.now();
+
+            knowledgeBases[id] = {
+                name,
+                createdAt: new Date().toISOString().slice(0, 10),
+                files: []
+            };
+
+            closeCreateKBModal();
+            renderKBTable();
+            showToast(`知识库「${name}」创建成功`, 2500);
+        }
+
+        function renderKBTable() {
+            const tbody = document.getElementById('kb-table-body');
+            tbody.innerHTML = '';
+
+            Object.keys(knowledgeBases).forEach(id => {
+                const kb = knowledgeBases[id];
+                const tr = document.createElement('tr');
+
+                tr.className = 'hover:bg-gray-50';
+                tr.dataset.kbId = id;
+
+                tr.innerHTML = `
+                    <td class="py-6 px-8 font-medium">${escapeHTML(kb.name)}</td>
+                    <td class="py-6 px-8 text-gray-500">${kb.files.length}</td>
+                    <td class="py-6 px-8 text-gray-500">${escapeHTML(kb.createdAt || '新建')}</td>
+                    <td class="py-6 px-8"><span class="px-4 py-1 bg-green-100 text-green-700 rounded-3xl text-xs">正常</span></td>
+                    <td class="py-6 px-8 text-right">
+                        <button onclick="viewKBDetail('${id}')" class="text-blue-600 hover:underline">查看</button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function viewKBDetail(id) {
+            currentKBId = id;
+            const kb = knowledgeBases[id];
+
+            document.getElementById('detail-kb-name').textContent = kb.name;
+            document.getElementById('kb-list-view').classList.add('hidden');
+            document.getElementById('kb-detail-view').classList.remove('hidden');
+
+            renderFileGrid();
+        }
+
+        function backToKBList() {
+            currentKBId = null;
+
+            document.getElementById('kb-list-view').classList.remove('hidden');
+            document.getElementById('kb-detail-view').classList.add('hidden');
+
+            renderKBTable();
+        }
+
+        function renderFileGrid() {
+            if (!currentKBId) return;
+
+            const kb = knowledgeBases[currentKBId];
+            const container = document.getElementById('file-grid');
+
+            container.innerHTML = '';
+            document.getElementById('file-count').textContent = `共 ${kb.files.length} 项`;
+
+            if (!kb.files.length) {
+                container.innerHTML = `
+                    <div class="col-span-5 border border-dashed border-gray-200 rounded-3xl py-16 text-center text-gray-400">
+                        <i class="fa-solid fa-folder-open text-4xl mb-4"></i>
+                        <div>当前知识库暂无文件，请点击右上角“新增知识”添加内容</div>
+                    </div>
+                `;
+                return;
+            }
+
+            kb.files.forEach((file, idx) => {
+                const card = document.createElement('div');
+
+                card.className = 'file-card bg-white border border-gray-100 rounded-3xl p-5 cursor-pointer group';
+
+                card.innerHTML = `
+                    <div class="flex flex-col h-full">
+                        <div class="flex justify-between items-start mb-4">
+                            <i class="${getFileIconClass(file.type)} text-4xl"></i>
+                            ${getTypeTagHTML(file.type)}
+                        </div>
+
+                        <div class="flex-1">
+                            <div class="font-medium text-sm line-clamp-2 group-hover:text-blue-600 transition-colors">${escapeHTML(file.name)}</div>
+                            ${file.size ? `<div class="text-xs text-gray-400 mt-1">${escapeHTML(file.size)}</div>` : ''}
+                        </div>
+
+                        <div class="flex justify-between items-center mt-4 pt-4 border-t text-xs">
+                            <span class="${file.status === '已解析' ? 'text-green-600' : 'text-amber-500'} font-medium">${escapeHTML(file.status)}</span>
+                            <button onclick="event.stopImmediatePropagation(); deleteFile(${idx});" class="text-gray-300 hover:text-red-400">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                card.onclick = () => showPreviewModal(file);
+                container.appendChild(card);
+            });
+        }
+
+        function deleteFile(idx) {
+            if (!currentKBId) return;
+
+            if (confirm('确定删除该文件吗？')) {
+                const target = knowledgeBases[currentKBId].files[idx];
+
+                if (target && target.objectUrl) {
+                    URL.revokeObjectURL(target.objectUrl);
+                }
+
+                knowledgeBases[currentKBId].files.splice(idx, 1);
+
+                renderFileGrid();
+                renderKBTable();
+            }
+        }
+
+        function addNewKnowledge() {
+            if (!currentKBId) {
+                showToast('请先选择一个知识库', 2000);
+                return;
+            }
+
+            pendingAddFromKB = true;
+            switchTab(3);
+        }
+
+        // ==================== 文件预览 ====================
+        async function showPreviewModal(file) {
+            document.getElementById('preview-title').textContent = file.name;
+            document.getElementById('preview-icon').className = getFileIconClass(file.type) + ' text-3xl';
+
+            const contentArea = document.getElementById('preview-content');
+
+            contentArea.innerHTML = `
+                <div class="py-20 text-center text-gray-400">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl mb-4"></i>
+                    <div>正在读取文件内容...</div>
+                </div>
+            `;
+
+            document.getElementById('preview-modal').classList.remove('hidden');
+
+            try {
+                if (file.localFile) {
+                    contentArea.innerHTML = await renderUploadedFilePreview(file);
+                    return;
+                }
+
+                const previewType = String(file.type).toLowerCase();
+
+                if (previewType === 'url') {
+                    contentArea.innerHTML = renderWebPreview(file);
+                } else if (previewType === 'vector') {
+                    contentArea.innerHTML = renderVectorPreview(file);
+                } else if (previewType === 'faq') {
+                    contentArea.innerHTML = renderFAQPreview(file);
+                } else if (previewType === 'md') {
+                    contentArea.innerHTML = renderPresetMarkdownPreview(file);
+                } else if (previewType === 'ppt' || previewType === 'pptx') {
+                    contentArea.innerHTML = renderPresetPowerPointPreview(file);
+                } else {
+                    contentArea.innerHTML = renderGenericFilePreview(file);
+                }
+            } catch (error) {
+                console.error(error);
+
+                contentArea.innerHTML = `
+                    ${renderPreviewMeta(file)}
+                    <div class="preview-section-card text-center py-16">
+                        <i class="fa-solid fa-triangle-exclamation text-4xl text-amber-500 mb-4"></i>
+                        <div class="text-lg font-medium">文件预览失败</div>
+                        <p class="text-gray-500 mt-2">当前文件无法在浏览器中直接解析，但文件已成功导入知识库。</p>
+                        ${renderOpenOriginalButton(file)}
+                    </div>
+                `;
+            }
+        }
+
+        function ensureObjectUrl(file) {
+            if (!file.objectUrl && file.localFile) {
+                file.objectUrl = URL.createObjectURL(file.localFile);
+            }
+
+            return file.objectUrl;
+        }
+
+        function renderOpenOriginalButton(file) {
+            if (!file.localFile) return '';
+
+            const url = ensureObjectUrl(file);
+
+            return `
+                <div class="mt-6">
+                    <a href="${url}" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-3xl hover:bg-blue-700 text-sm font-medium">
+                        <i class="fa-solid fa-up-right-from-square"></i>
+                        在新标签打开原文件
+                    </a>
+                </div>
+            `;
+        }
+
+        function getRealFileType(file) {
+            return String(file.rawType || file.type || '').toLowerCase();
+        }
+
+        function isTextFile(ext) {
+            return ['txt', 'md', 'markdown', 'json', 'jsonl', 'csv', 'html', 'css', 'js', 'ts', 'xml', 'yaml', 'yml', 'log'].includes(ext);
+        }
+
+        function isImageFile(ext) {
+            return ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'webp'].includes(ext);
+        }
+
+        function renderPreviewMeta(file) {
+            return `
+                <div class="mb-6 flex flex-wrap items-center gap-3">
+                    <span class="text-sm text-gray-500">类型：${getTypeLabel(file.type)}</span>
+                    <span class="text-sm text-gray-300">|</span>
+                    <span class="text-sm">状态：<span class="${file.status === '已解析' ? 'text-green-600' : 'text-amber-500'}">${escapeHTML(file.status)}</span></span>
+                    ${file.size ? `<span class="text-sm text-gray-300">|</span><span class="text-sm text-gray-500">大小：${escapeHTML(file.size)}</span>` : ''}
+                </div>
+                <hr class="mb-6">
+            `;
+        }
+
+        function renderTextPreviewBlock(text, languageLabel = '文本内容') {
+            const safeText = escapeHTML(text || '');
+
+            return `
+                <div class="preview-section-card">
+                    <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-align-left text-blue-500"></i>${escapeHTML(languageLabel)}
+                    </h5>
+                    <pre class="bg-gray-900 text-gray-100 rounded-3xl p-5 overflow-auto subtle-scroll text-sm leading-7 whitespace-pre-wrap max-h-[560px]">${safeText}</pre>
+                </div>
+            `;
+        }
+
+        function renderMarkdownToHTML(text) {
+            const markdownText = String(text || '');
+
+            if (window.marked) {
+                marked.setOptions({
+                    gfm: true,
+                    breaks: true
+                });
+
+                const rawHtml = marked.parse(markdownText);
+                return window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
+            }
+
+            return escapeHTML(markdownText).replace(/\n/g, '<br>');
+        }
+
+        function renderMarkdownPreviewBlock(text, title = 'Markdown 文档预览') {
+            const previewId = 'md-preview-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+            const safeText = escapeHTML(text || '');
+            const renderedHtml = renderMarkdownToHTML(text);
+
+            return `
+                <div class="preview-section-card">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                        <h5 class="font-semibold text-lg flex items-center gap-2">
+                            <i class="fa-brands fa-markdown text-purple-500"></i>${escapeHTML(title)}
+                        </h5>
+
+                        <div class="flex items-center gap-2 bg-gray-50 p-1 rounded-3xl">
+                            <button id="${previewId}-source-btn" onclick="switchMarkdownPreviewMode('${previewId}', 'source')" class="preview-tab-button active px-4 py-2 rounded-3xl text-sm font-medium">
+                                <i class="fa-solid fa-code mr-1"></i>源码模式
+                            </button>
+                            <button id="${previewId}-render-btn" onclick="switchMarkdownPreviewMode('${previewId}', 'render')" class="preview-tab-button px-4 py-2 rounded-3xl text-sm font-medium">
+                                <i class="fa-solid fa-eye mr-1"></i>渲染预览
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="${previewId}-source" class="markdown-source-panel">
+                        <pre class="bg-gray-900 text-gray-100 rounded-3xl p-5 overflow-auto subtle-scroll text-sm leading-7 whitespace-pre-wrap max-h-[620px]">${safeText}</pre>
+                    </div>
+
+                    <div id="${previewId}-render" class="markdown-render-panel hidden">
+                        <div class="markdown-rendered bg-white border border-gray-100 rounded-3xl p-6 overflow-auto subtle-scroll max-h-[620px]">
+                            ${renderedHtml || '<p class="text-gray-400">未解析到可展示正文。</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchMarkdownPreviewMode(previewId, mode) {
+            const sourcePanel = document.getElementById(`${previewId}-source`);
+            const renderPanel = document.getElementById(`${previewId}-render`);
+            const sourceBtn = document.getElementById(`${previewId}-source-btn`);
+            const renderBtn = document.getElementById(`${previewId}-render-btn`);
+
+            if (!sourcePanel || !renderPanel || !sourceBtn || !renderBtn) return;
+
+            const showRender = mode === 'render';
+
+            sourcePanel.classList.toggle('hidden', showRender);
+            renderPanel.classList.toggle('hidden', !showRender);
+
+            sourceBtn.classList.toggle('active', !showRender);
+            renderBtn.classList.toggle('active', showRender);
+        }
+
+        function renderPresetMarkdownPreview(file) {
+            return `
+                ${renderPreviewMeta(file)}
+
+                <div class="space-y-6">
+                    <div class="preview-section-card bg-gradient-to-br from-purple-50 to-white">
+                        <div class="flex items-start justify-between gap-6">
+                            <div>
+                                <div class="text-sm text-purple-600 font-medium">Markdown 文档</div>
+                                <h4 class="text-2xl font-semibold mt-2 break-all">${escapeHTML(file.name)}</h4>
+                                <p class="text-gray-500 mt-2">当前预置演示文件没有真实本地 File 对象，因此展示一份 Markdown 示例内容。真实上传的 .md 文件会读取原始文件内容并支持源码 / 渲染双模式切换。</p>
+                            </div>
+
+                            <div class="w-16 h-16 rounded-3xl bg-purple-600 text-white flex items-center justify-center text-3xl shadow-lg flex-shrink-0">
+                                <i class="fa-brands fa-markdown"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${renderMarkdownPreviewBlock(file.previewContent || sampleMarkdownContent, 'Markdown 双模式预览')}
+                </div>
+            `;
+        }
+
+        function getZipPathDir(path) {
+            const index = path.lastIndexOf('/');
+            return index >= 0 ? path.slice(0, index) : '';
+        }
+
+        function normalizeZipPath(path) {
+            const parts = [];
+
+            String(path || '').split('/').forEach(part => {
+                if (!part || part === '.') return;
+                if (part === '..') {
+                    parts.pop();
+                    return;
+                }
+                parts.push(part);
+            });
+
+            return parts.join('/');
+        }
+
+        function getPPTXSlideNumber(path) {
+            const match = String(path || '').match(/slide(\d+)\.xml$/i);
+            return match ? Number(match[1]) : 0;
+        }
+
+        function getPPTXMimeByPath(path) {
+            const ext = String(path || '').split('.').pop().toLowerCase();
+
+            const mimeMap = {
+                png: 'image/png',
+                jpg: 'image/jpeg',
+                jpeg: 'image/jpeg',
+                gif: 'image/gif',
+                webp: 'image/webp',
+                bmp: 'image/bmp',
+                svg: 'image/svg+xml'
+            };
+
+            return mimeMap[ext] || 'application/octet-stream';
+        }
+
+        function extractPPTXTextLines(xmlDoc) {
+            const paragraphs = Array.from(xmlDoc.getElementsByTagName('*')).filter(node => node.localName === 'p');
+            const lines = [];
+
+            paragraphs.forEach(paragraph => {
+                const text = Array.from(paragraph.getElementsByTagName('*'))
+                    .filter(node => node.localName === 't')
+                    .map(node => node.textContent || '')
+                    .join('')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                if (text) {
+                    lines.push(text);
+                }
+            });
+
+            return lines;
+        }
+
+        async function extractPPTXSlideImages(zip, slidePath) {
+            const relPath = `${getZipPathDir(slidePath)}/_rels/${slidePath.split('/').pop()}.rels`;
+            const relFile = zip.file(relPath);
+
+            if (!relFile) return [];
+
+            const relXml = await relFile.async('text');
+            const relDoc = new DOMParser().parseFromString(relXml, 'application/xml');
+            const relationships = Array.from(relDoc.getElementsByTagName('*')).filter(node => node.localName === 'Relationship');
+            const imageTargets = relationships
+                .filter(node => String(node.getAttribute('Type') || '').includes('/image'))
+                .map(node => node.getAttribute('Target'))
+                .filter(Boolean)
+                .filter(target => !/^https?:\/\//i.test(target))
+                .slice(0, 6);
+
+            const images = [];
+
+            for (const target of imageTargets) {
+                const imagePath = normalizeZipPath(`${getZipPathDir(slidePath)}/${target}`);
+                const imageFile = zip.file(imagePath);
+
+                if (!imageFile) continue;
+
+                const base64 = await imageFile.async('base64');
+
+                images.push({
+                    path: imagePath,
+                    dataUri: `data:${getPPTXMimeByPath(imagePath)};base64,${base64}`
+                });
+            }
+
+            return images;
+        }
+
+        async function buildPPTXSlidePreview(zip, slidePath, index) {
+            const xml = await zip.file(slidePath).async('text');
+            const xmlDoc = new DOMParser().parseFromString(xml, 'application/xml');
+            const parserError = xmlDoc.getElementsByTagName('parsererror')[0];
+
+            if (parserError) {
+                return `
+                    <div class="ppt-slide-card">
+                        <div class="ppt-slide-header">
+                            <span>幻灯片 ${index + 1}</span>
+                            <span class="text-xs font-medium text-amber-600">XML 解析失败</span>
+                        </div>
+                        <div class="p-6 text-gray-500">该页无法解析，但原文件已保留。</div>
+                    </div>
+                `;
+            }
+
+            const lines = extractPPTXTextLines(xmlDoc);
+            const images = await extractPPTXSlideImages(zip, slidePath);
+            const title = lines[0] || `第 ${index + 1} 页`;
+            const bodyLines = lines.slice(0, 8);
+            const chips = bodyLines.length
+                ? bodyLines.map((line, lineIndex) => `
+                    <div class="ppt-text-chip ${lineIndex === 0 ? 'text-lg font-semibold text-slate-900' : ''}">
+                        ${escapeHTML(line)}
+                    </div>
+                `).join('')
+                : '<div class="ppt-text-chip text-gray-400">该页未提取到文本内容。</div>';
+
+            const imageHtml = images.length
+                ? `
+                    <div class="ppt-image-grid mt-1">
+                        ${images.map(image => `<img src="${image.dataUri}" alt="${escapeHTML(image.path)}">`).join('')}
+                    </div>
+                `
+                : '';
+
+            const allTextHtml = lines.length
+                ? `
+                    <div class="mt-4 px-5 pb-5">
+                        <div class="text-xs text-gray-400 mb-2">提取文本</div>
+                        <ol class="space-y-2 text-sm text-gray-600 list-decimal pl-5">
+                            ${lines.slice(0, 18).map(line => `<li>${escapeHTML(line)}</li>`).join('')}
+                        </ol>
+                        ${lines.length > 18 ? `<p class="text-xs text-gray-400 mt-3">还有 ${lines.length - 18} 条文本未展开。</p>` : ''}
+                    </div>
+                `
+                : '';
+
+            return `
+                <div class="ppt-slide-card">
+                    <div class="ppt-slide-header">
+                        <span class="truncate">${escapeHTML(title)}</span>
+                        <span class="text-xs font-medium whitespace-nowrap">幻灯片 ${index + 1}</span>
+                    </div>
+
+                    <div class="ppt-slide-canvas">
+                        ${chips}
+                        ${imageHtml}
+                    </div>
+
+                    ${allTextHtml}
+                </div>
+            `;
+        }
+
+        async function renderPowerPointPreview(file) {
+            const ext = getRealFileType(file);
+            const url = ensureObjectUrl(file);
+
+            if (ext === 'pptx') {
+                if (!window.JSZip) {
+                    return renderUnsupportedPreview(file, '当前页面未加载 PPTX 解析库，无法读取幻灯片内容。');
+                }
+
+                const arrayBuffer = await file.localFile.arrayBuffer();
+                const zip = await JSZip.loadAsync(arrayBuffer);
+                const slidePaths = Object.keys(zip.files)
+                    .filter(path => /^ppt\/slides\/slide\d+\.xml$/i.test(path))
+                    .sort((a, b) => getPPTXSlideNumber(a) - getPPTXSlideNumber(b));
+
+                if (!slidePaths.length) {
+                    return renderUnsupportedPreview(file, '未在 PPTX 文件中找到可解析的幻灯片。');
+                }
+
+                const maxSlides = 30;
+                const slideHtmlList = [];
+
+                for (let i = 0; i < Math.min(slidePaths.length, maxSlides); i++) {
+                    slideHtmlList.push(await buildPPTXSlidePreview(zip, slidePaths[i], i));
+                }
+
+                return `
+                    <div class="preview-section-card">
+                        <div class="flex flex-wrap items-start justify-between gap-4 mb-5">
+                            <div>
+                                <h5 class="font-semibold text-lg flex items-center gap-2">
+                                    <i class="fa-solid fa-file-powerpoint text-orange-500"></i>PPTX 幻灯片预览
+                                </h5>
+                                <p class="text-sm text-gray-500 mt-2">已在浏览器端读取 PPTX 结构，按页提取文本与图片资源进行预览。</p>
+                            </div>
+
+                            <div class="flex gap-3 text-center">
+                                <div class="rounded-2xl bg-orange-50 px-4 py-3">
+                                    <div class="text-2xl font-semibold text-orange-600">${slidePaths.length}</div>
+                                    <div class="text-xs text-orange-500">总页数</div>
+                                </div>
+                                <div class="rounded-2xl bg-blue-50 px-4 py-3">
+                                    <div class="text-2xl font-semibold text-blue-600">${Math.min(slidePaths.length, maxSlides)}</div>
+                                    <div class="text-xs text-blue-500">已展示</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-amber-50 border border-amber-100 text-amber-700 rounded-3xl px-5 py-4 text-sm leading-7 mb-6">
+                            <i class="fa-solid fa-circle-info mr-2"></i>
+                            浏览器端预览主要展示文本与图片；复杂动画、母版布局、SmartArt、图表和嵌入对象可能与 PowerPoint 原始效果存在差异。
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            ${slideHtmlList.join('')}
+                        </div>
+
+                        ${slidePaths.length > maxSlides ? `<p class="text-xs text-gray-400 mt-5">为保证浏览器性能，仅展示前 ${maxSlides} 页。</p>` : ''}
+
+                        ${renderOpenOriginalButton(file)}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="preview-section-card">
+                    <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-file-powerpoint text-orange-500"></i>PPT 原文件预览
+                    </h5>
+
+                    <div class="bg-orange-50 border border-orange-100 text-orange-700 rounded-3xl px-5 py-4 text-sm leading-7 mb-5">
+                        <i class="fa-solid fa-circle-info mr-2"></i>
+                        旧版 .ppt 是二进制格式，浏览器端无法像 .pptx 一样稳定解析幻灯片 XML。系统会保留原文件，并尝试用浏览器原生能力打开；建议转换为 .pptx 后可获得逐页文本与图片预览。
+                    </div>
+
+                    <object data="${url}" type="application/vnd.ms-powerpoint" class="w-full h-[620px] rounded-3xl border bg-gray-50">
+                        <div class="h-[620px] flex flex-col items-center justify-center text-center text-gray-500 p-8">
+                            <i class="fa-solid fa-file-powerpoint text-6xl text-orange-500 mb-5"></i>
+                            <div class="text-lg font-medium text-gray-800">当前浏览器不支持直接嵌入预览 .ppt 文件</div>
+                            <p class="mt-2">请点击下方按钮在新标签打开，或将文件另存为 .pptx 后重新上传。</p>
+                        </div>
+                    </object>
+
+                    ${renderOpenOriginalButton(file)}
+                </div>
+            `;
+        }
+
+        function renderPresetPowerPointPreview(file) {
+            return `
+                ${renderPreviewMeta(file)}
+
+                <div class="space-y-6">
+                    <div class="preview-section-card bg-gradient-to-br from-orange-50 to-white">
+                        <div class="flex items-start justify-between gap-6">
+                            <div>
+                                <div class="text-sm text-orange-600 font-medium">PowerPoint 文档</div>
+                                <h4 class="text-2xl font-semibold mt-2 break-all">${escapeHTML(file.name)}</h4>
+                                <p class="text-gray-500 mt-2">真实上传的 .pptx 文件会在浏览器端解析幻灯片结构，展示文本与图片预览；旧版 .ppt 会提供原文件打开兜底。</p>
+                            </div>
+
+                            <div class="w-16 h-16 rounded-3xl bg-orange-500 text-white flex items-center justify-center text-3xl shadow-lg flex-shrink-0">
+                                <i class="fa-solid fa-file-powerpoint"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="ppt-slide-card">
+                            <div class="ppt-slide-header">
+                                <span>知识库产品规划</span>
+                                <span class="text-xs font-medium">示例 1</span>
+                            </div>
+                            <div class="ppt-slide-canvas">
+                                <div class="ppt-text-chip text-lg font-semibold text-slate-900">企业知识库能力升级</div>
+                                <div class="ppt-text-chip">支持文档、网页、FAQ、向量数据库与 API 接入。</div>
+                                <div class="ppt-text-chip">新增 PPTX 结构化预览与 Markdown 双模式预览。</div>
+                            </div>
+                        </div>
+
+                        <div class="ppt-slide-card">
+                            <div class="ppt-slide-header">
+                                <span>处理链路</span>
+                                <span class="text-xs font-medium">示例 2</span>
+                            </div>
+                            <div class="ppt-slide-canvas">
+                                <div class="ppt-text-chip">1. 上传文件</div>
+                                <div class="ppt-text-chip">2. 解析幻灯片文本和图片</div>
+                                <div class="ppt-text-chip">3. 生成知识片段并写入向量库</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                const next = line[i + 1];
+
+                if (char === '"' && inQuotes && next === '"') {
+                    current += '"';
+                    i++;
+                } else if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            result.push(current);
+            return result;
+        }
+
+        function renderCSVPreview(text) {
+            const lines = text.split(/\r?\n/).filter(line => line.trim()).slice(0, 60);
+            const rows = lines.map(parseCSVLine);
+
+            if (!rows.length) {
+                return renderTextPreviewBlock(text, 'CSV 内容');
+            }
+
+            const header = rows[0];
+            const bodyRows = rows.slice(1);
+
+            const ths = header.map(cell => `<th class="text-left">${escapeHTML(cell)}</th>`).join('');
+            const trs = bodyRows.map(row => `
+                <tr>
+                    ${row.map(cell => `<td>${escapeHTML(cell)}</td>`).join('')}
+                </tr>
+            `).join('');
+
+            return `
+                <div class="preview-section-card">
+                    <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-table text-green-600"></i>CSV 表格预览
+                    </h5>
+
+                    <div class="overflow-auto subtle-scroll">
+                        <table class="preview-table w-full text-sm min-w-[720px]">
+                            <thead>
+                                <tr>${ths}</tr>
+                            </thead>
+                            <tbody>${trs}</tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-xs text-gray-400 mt-4">仅展示前 60 行。</p>
+                </div>
+            `;
+        }
+
+        async function renderDocxPreview(file) {
+            if (!window.mammoth) {
+                return renderUnsupportedPreview(file, '当前页面未加载 DOCX 解析库。');
+            }
+
+            const arrayBuffer = await file.localFile.arrayBuffer();
+            const result = await mammoth.convertToHtml({ arrayBuffer });
+
+            return `
+                <div class="preview-section-card">
+                    <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-file-word text-blue-500"></i>DOCX 文档预览
+                    </h5>
+
+                    <div class="prose max-w-none leading-8 text-gray-700">
+                        ${result.value || '<p class="text-gray-400">未解析到可展示正文。</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function renderExcelPreview(file) {
+            if (!window.XLSX) {
+                return renderUnsupportedPreview(file, '当前页面未加载 Excel 解析库。');
+            }
+
+            const arrayBuffer = await file.localFile.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+            const sheetsHtml = workbook.SheetNames.slice(0, 3).map(sheetName => {
+                const sheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }).slice(0, 40);
+
+                if (!rows.length) {
+                    return `
+                        <div class="mb-8">
+                            <h6 class="font-medium mb-3">${escapeHTML(sheetName)}</h6>
+                            <p class="text-gray-400">该工作表暂无可展示数据。</p>
+                        </div>
+                    `;
+                }
+
+                const maxCols = Math.max(...rows.map(row => row.length));
+
+                const tableRows = rows.map((row, rowIndex) => `
+                    <tr>
+                        ${Array.from({ length: maxCols }).map((_, colIndex) => {
+                            const cell = row[colIndex] ?? '';
+
+                            return rowIndex === 0
+                                ? `<th class="text-left">${escapeHTML(cell)}</th>`
+                                : `<td>${escapeHTML(cell)}</td>`;
+                        }).join('')}
+                    </tr>
+                `).join('');
+
+                return `
+                    <div class="mb-8">
+                        <h6 class="font-medium mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-table-cells text-green-600"></i>
+                            ${escapeHTML(sheetName)}
+                        </h6>
+
+                        <div class="overflow-auto subtle-scroll border rounded-3xl">
+                            <table class="preview-table w-full text-sm min-w-[760px]">
+                                <tbody>${tableRows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="preview-section-card">
+                    <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel text-green-600"></i>Excel 表格预览
+                    </h5>
+
+                    ${sheetsHtml}
+
+                    <p class="text-xs text-gray-400">仅展示前 3 个工作表，每个工作表前 40 行。</p>
+                </div>
+            `;
+        }
+
+        function renderUnsupportedPreview(file, message = '该文件格式暂不支持在浏览器中直接解析。') {
+            return `
+                <div class="preview-section-card text-center py-16">
+                    <i class="${getFileIconClass(file.type)} text-5xl mb-5"></i>
+                    <div class="text-lg font-medium">暂不支持直接预览该格式</div>
+                    <p class="text-gray-500 mt-2">${escapeHTML(message)}</p>
+
+                    <div class="mt-6 grid grid-cols-3 gap-4 text-left max-w-2xl mx-auto">
+                        <div class="rounded-3xl bg-gray-50 p-4">
+                            <div class="text-xs text-gray-400">文件名</div>
+                            <div class="font-medium mt-1 break-all">${escapeHTML(file.name)}</div>
+                        </div>
+
+                        <div class="rounded-3xl bg-gray-50 p-4">
+                            <div class="text-xs text-gray-400">文件类型</div>
+                            <div class="font-medium mt-1">${escapeHTML(getRealFileType(file).toUpperCase())}</div>
+                        </div>
+
+                        <div class="rounded-3xl bg-gray-50 p-4">
+                            <div class="text-xs text-gray-400">文件大小</div>
+                            <div class="font-medium mt-1">${escapeHTML(file.size || '-')}</div>
+                        </div>
+                    </div>
+
+                    ${renderOpenOriginalButton(file)}
+                </div>
+            `;
+        }
+
+        async function renderUploadedFilePreview(file) {
+            const ext = getRealFileType(file);
+            const url = ensureObjectUrl(file);
+
+            let bodyHtml = '';
+
+            if (ext === 'pdf') {
+                bodyHtml = `
+                    <div class="preview-section-card">
+                        <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-file-pdf text-red-500"></i>PDF 预览
+                        </h5>
+
+                        <iframe src="${url}" class="w-full h-[680px] rounded-3xl border"></iframe>
+
+                        ${renderOpenOriginalButton(file)}
+                    </div>
+                `;
+            } else if (isImageFile(ext)) {
+                bodyHtml = `
+                    <div class="preview-section-card">
+                        <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-file-image text-pink-500"></i>图片预览
+                        </h5>
+
+                        <div class="bg-gray-50 rounded-3xl p-4 text-center">
+                            <img src="${url}" alt="${escapeHTML(file.name)}" class="max-w-full max-h-[680px] mx-auto rounded-2xl shadow">
+                        </div>
+
+                        ${renderOpenOriginalButton(file)}
+                    </div>
+                `;
+            } else if (ext === 'csv') {
+                const text = await file.localFile.text();
+                bodyHtml = renderCSVPreview(text);
+            } else if (ext === 'json' || ext === 'jsonl') {
+                const text = await file.localFile.text();
+
+                let formatted = text;
+
+                if (ext === 'json') {
+                    try {
+                        formatted = JSON.stringify(JSON.parse(text), null, 2);
+                    } catch (e) {
+                        formatted = text;
+                    }
+                }
+
+                bodyHtml = renderTextPreviewBlock(formatted, ext.toUpperCase() + ' 内容');
+            } else if (ext === 'md' || ext === 'markdown') {
+                const text = await file.localFile.text();
+                bodyHtml = renderMarkdownPreviewBlock(text, 'Markdown 双模式预览');
+            } else if (isTextFile(ext)) {
+                const text = await file.localFile.text();
+                bodyHtml = renderTextPreviewBlock(text, ext.toUpperCase() + ' 内容');
+            } else if (ext === 'docx') {
+                bodyHtml = await renderDocxPreview(file);
+            } else if (ext === 'xlsx' || ext === 'xls') {
+                bodyHtml = await renderExcelPreview(file);
+            } else if (ext === 'pptx' || ext === 'ppt') {
+                bodyHtml = await renderPowerPointPreview(file);
+            } else {
+                bodyHtml = renderUnsupportedPreview(file);
+            }
+
+            return `
+                ${renderPreviewMeta(file)}
+
+                <div class="space-y-6">
+                    <div class="preview-section-card bg-gradient-to-br from-blue-50 to-white">
+                        <div class="flex items-start justify-between gap-6">
+                            <div>
+                                <div class="text-sm text-blue-600 font-medium">真实导入文件</div>
+                                <h4 class="text-2xl font-semibold mt-2 break-all">${escapeHTML(file.name)}</h4>
+                                <p class="text-gray-500 mt-2">
+                                    文件类型：${escapeHTML(ext.toUpperCase())}
+                                    ${file.size ? `　文件大小：${escapeHTML(file.size)}` : ''}
+                                </p>
+                            </div>
+
+                            <div class="w-16 h-16 rounded-3xl bg-blue-600 text-white flex items-center justify-center text-3xl shadow-lg flex-shrink-0">
+                                <i class="${getFileIconClass(file.type).replace(/ text-\S+/g, '')}"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${bodyHtml}
+                </div>
+            `;
+        }
+
+        function renderWebPreview(file) {
+            const c = fixedWebPreviewContent;
+
+            const paragraphs = c.paragraphs.map(p => `<p class="mb-4">${escapeHTML(p)}</p>`).join('');
+
+            const timeline = c.timeline.map(row => `
+                <tr>
+                    <td class="w-28 font-medium text-gray-900">${escapeHTML(row[0])}</td>
+                    <td>${escapeHTML(row[1])}</td>
+                </tr>
+            `).join('');
+
+            const business = c.business.map(item => `
+                <span class="px-3 py-2 bg-blue-50 text-blue-700 rounded-2xl text-sm">${escapeHTML(item)}</span>
+            `).join('');
+
+            return `
+                ${renderPreviewMeta(file)}
+
+                <div class="space-y-6">
+                    <div class="preview-section-card bg-gradient-to-br from-blue-50 to-white">
+                        <div class="flex items-start justify-between gap-6">
+                            <div>
+                                <div class="text-sm text-blue-600 font-medium mb-2">${escapeHTML(c.sourceName)}</div>
+                                <h4 class="text-3xl font-semibold text-gray-900">${escapeHTML(c.title)}</h4>
+                                <p class="mt-3 text-gray-500">以下为网页抓取入库后的正文内容预览，系统已对正文、发展历程、业务方向等信息进行结构化展示。</p>
+                            </div>
+
+                            <div class="w-16 h-16 rounded-3xl bg-blue-600 text-white flex items-center justify-center text-3xl shadow-lg">
+                                <i class="fa-solid fa-building"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="preview-section-card">
+                        <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-align-left text-blue-500"></i>词条正文
+                        </h5>
+                        <div class="text-gray-700 leading-8">${paragraphs}</div>
+                    </div>
+
+                    <div class="preview-section-card">
+                        <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>发展历程
+                        </h5>
+
+                        <div class="overflow-auto subtle-scroll">
+                            <table class="preview-table w-full text-sm">
+                                <tbody>${timeline}</tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="preview-section-card">
+                        <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group text-emerald-500"></i>业务与能力方向
+                        </h5>
+
+                        <div class="flex flex-wrap gap-3">${business}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderVectorPreview(file) {
+            const rows = vectorPreviewRows.map((row, idx) => `
+                <tr>
+                    <td class="text-gray-400">${idx + 1}</td>
+                    <td>
+                        <div class="font-medium text-gray-900">${escapeHTML(row.title)}</div>
+                        <div class="text-xs text-gray-400 mt-1">${escapeHTML(row.id)}</div>
+                    </td>
+                    <td><span class="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-2xl text-xs">${escapeHTML(row.category)}</span></td>
+                    <td class="text-gray-600 leading-6">${escapeHTML(row.content)}</td>
+                    <td class="text-blue-600 font-medium">${row.score.toFixed(3)}</td>
+                </tr>
+            `).join('');
+
+            return `
+                ${renderPreviewMeta(file)}
+
+                <div class="space-y-6">
+                    <div class="preview-section-card bg-gradient-to-br from-emerald-50 to-white">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <div class="text-sm text-emerald-600 font-medium">向量数据库内容预览</div>
+                                <h4 class="text-2xl font-semibold mt-2">${escapeHTML(file.name)}</h4>
+                                <p class="text-gray-500 mt-2">Provider：${escapeHTML(file.vectorProvider || 'VectorDB')}　Index：${escapeHTML(file.vectorIndex || 'university-knowledge-index')}</p>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3 text-center">
+                                <div class="bg-white rounded-2xl px-4 py-3 border">
+                                    <div class="text-2xl font-semibold">20</div>
+                                    <div class="text-xs text-gray-400">片段</div>
+                                </div>
+                                <div class="bg-white rounded-2xl px-4 py-3 border">
+                                    <div class="text-2xl font-semibold">1536</div>
+                                    <div class="text-xs text-gray-400">维度</div>
+                                </div>
+                                <div class="bg-white rounded-2xl px-4 py-3 border">
+                                    <div class="text-2xl font-semibold">0.94</div>
+                                    <div class="text-xs text-gray-400">均值</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="preview-section-card">
+                        <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-table-list text-emerald-500"></i>向量片段列表
+                        </h5>
+
+                        <div class="overflow-auto subtle-scroll">
+                            <table class="preview-table w-full text-sm min-w-[980px]">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left w-14">#</th>
+                                        <th class="text-left w-48">标题</th>
+                                        <th class="text-left w-32">分类</th>
+                                        <th class="text-left">片段内容</th>
+                                        <th class="text-left w-24">相似度</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFAQPreview(file) {
+            const rows = faqPreviewRows.map((row, idx) => `
+                <tr>
+                    <td class="text-gray-400">${idx + 1}</td>
+                    <td class="font-medium text-gray-900">${escapeHTML(row[0])}</td>
+                    <td class="text-gray-600 leading-6">${escapeHTML(row[1])}</td>
+                    <td><span class="px-3 py-1 bg-amber-50 text-amber-700 rounded-2xl text-xs">${escapeHTML(row[2])}</span></td>
+                </tr>
+            `).join('');
+
+            return `
+                ${renderPreviewMeta(file)}
+
+                <div class="space-y-6">
+                    <div class="preview-section-card bg-gradient-to-br from-amber-50 to-white">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <div class="text-sm text-amber-600 font-medium">FAQ问答对文件</div>
+                                <h4 class="text-2xl font-semibold mt-2">${escapeHTML(file.name)}</h4>
+                                <p class="text-gray-500 mt-2">系统已按“问题、答案、分类、关键词”结构识别内容，可用于标准问答召回。</p>
+                            </div>
+
+                            <div class="w-16 h-16 rounded-3xl bg-amber-500 text-white flex items-center justify-center text-3xl shadow-lg">
+                                <i class="fa-solid fa-circle-question"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="preview-section-card">
+                        <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-amber-500"></i>问答内容预览
+                        </h5>
+
+                        <div class="overflow-auto subtle-scroll">
+                            <table class="preview-table w-full text-sm min-w-[820px]">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left w-14">#</th>
+                                        <th class="text-left w-64">问题</th>
+                                        <th class="text-left">答案</th>
+                                        <th class="text-left w-32">分类</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGenericFilePreview(file) {
+            return `
+                ${renderPreviewMeta(file)}
+
+                <div class="space-y-6">
+                    <div class="preview-section-card">
+                        <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="${getFileIconClass(file.type)}"></i>文件内容摘要
+                        </h5>
+
+                        <div class="space-y-4 leading-8 text-gray-700">
+                            <p>该文件为系统预置演示文件，当前没有真实二进制文件内容，因此展示模拟摘要。</p>
+                            <p>真实上传的文件会保存浏览器 File 对象，并支持 PDF、图片、文本、CSV、DOCX、Excel 等格式的内容预览。</p>
+                            <p>当前文件名称：<strong>${escapeHTML(file.name)}</strong></p>
+                        </div>
+                    </div>
+
+                    <div class="preview-section-card">
+                        <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-diagram-project text-blue-500"></i>处理链路
+                        </h5>
+
+                        <div class="grid grid-cols-4 gap-4 text-center">
+                            <div class="rounded-3xl bg-blue-50 p-4">
+                                <i class="fa-solid fa-file-import text-blue-500 text-2xl"></i>
+                                <div class="text-sm font-medium mt-2">文件接收</div>
+                            </div>
+
+                            <div class="rounded-3xl bg-indigo-50 p-4">
+                                <i class="fa-solid fa-scissors text-indigo-500 text-2xl"></i>
+                                <div class="text-sm font-medium mt-2">内容切分</div>
+                            </div>
+
+                            <div class="rounded-3xl bg-emerald-50 p-4">
+                                <i class="fa-solid fa-database text-emerald-500 text-2xl"></i>
+                                <div class="text-sm font-medium mt-2">向量入库</div>
+                            </div>
+
+                            <div class="rounded-3xl bg-amber-50 p-4">
+                                <i class="fa-solid fa-magnifying-glass-chart text-amber-500 text-2xl"></i>
+                                <div class="text-sm font-medium mt-2">问答检索</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function closePreviewModal() {
+            document.getElementById('preview-modal').classList.add('hidden');
+        }
+
+        // ==================== Tab 切换 ====================
+        function switchTab(n) {
+            document.querySelectorAll('[id^="tab-"]').forEach(tab => tab.classList.add('hidden'));
+            document.getElementById(`tab-${n}`).classList.remove('hidden');
+
+            document.querySelectorAll('[id^="nav-"]').forEach(nav => nav.classList.remove('active', 'bg-gray-100', 'font-medium'));
+            document.getElementById(`nav-${n}`).classList.add('active', 'bg-gray-100', 'font-medium');
+
+            if (n === 1) {
+                renderKBTable();
+                document.getElementById('kb-list-view').classList.remove('hidden');
+                document.getElementById('kb-detail-view').classList.add('hidden');
+            }
+
+            if (n === 3 && pendingAddFromKB && currentKBId) {
+                document.getElementById('external-context').innerText = `正在向知识库「${knowledgeBases[currentKBId].name}」添加知识`;
+            } else {
+                document.getElementById('external-context').innerText = '';
+            }
+        }
+
+        // ==================== 智能问答 ====================
+        function sendQuestion() {
+            const input = document.getElementById('qa-input');
+            const question = input.value.trim();
+
+            if (!question) return;
+
+            const chat = document.getElementById('chat-area');
+
+            chat.innerHTML += `
+                <div class="flex justify-end">
+                    <div class="message bg-blue-600 text-white rounded-3xl rounded-tr-none p-6">${escapeHTML(question)}</div>
+                </div>
+            `;
+
+            input.value = '';
+            chat.scrollTop = chat.scrollHeight;
+
+            setTimeout(() => {
+                chat.innerHTML += `
+                    <div class="flex gap-4">
+                        <div class="w-8 h-8 bg-blue-600 rounded-2xl flex-shrink-0 flex items-center justify-center text-white">AI</div>
+                        <div class="message bg-white rounded-3xl rounded-tl-none p-6">
+                            根据<strong>《公司人力资源管理制度》</strong>第12条规定：<br><br>
+                            员工年假按工作年限计算，3年以下5天，3-10年10天，10年以上15天。<br><br>
+                            <span class="text-xs text-gray-400">来源：制度文档库 • 相似度 0.98</span>
+                        </div>
+                    </div>
+                `;
+
+                chat.scrollTop = chat.scrollHeight;
+            }, 800);
+        }
+
+        function quickAsk(q) {
+            document.getElementById('qa-input').value = q;
+            switchTab(2);
+            sendQuestion();
+        }
+
+        // ==================== 外部接入 ====================
+        const configTemplates = {
+            notion: {
+                title: '自定义API',
+                subtitle: '通过API接入外部数据库、知识库、向量库后，可按设定频率同步页面内容并生成知识片段。',
+                fields: [
+                    { label: 'API web', type: 'password', placeholder: '输入 API web', required: true },
+                    { label: 'API key', type: 'password', placeholder: '输入 Internal Integration Token', required: true },
+                    { label: '数据库 ID', type: 'text', placeholder: '例如: a1b2c3d4e5f6...', required: true },
+                    { label: '同步频率', type: 'select', options: ['实时', '每小时', '每天'], default: '每小时' }
+                ]
+            },
+            document: {
+                title: '上传文档',
+                subtitle: '上传完成后，系统将自动解析、切分并写入知识库。点击文件卡片可预览真实文件内容。',
+                upload: {
+                    label: '选择文件',
+                    accept: '.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.xlsx,.xls,.json,.jsonl,.ppt,.pptx,.jpg,.jpeg,.png,.bmp,.gif,.webp,.html,.css,.js,.ts,.xml,.yaml,.yml,.log',
+                    multiple: true,
+                    icon: 'fa-solid fa-cloud-arrow-up',
+                    title: '点击选择或拖拽文档到此区域',
+                    desc: '支持 pdf、doc、docx、txt、md、markdown、csv、xlsx、xls、json、jsonl、ppt、pptx、jpg、jpeg、png、bmp、gif、webp 等格式，单文件不超过 20MB'
+                }
+            },
+            faq: {
+                title: '上传FAQ问答对',
+                subtitle: '上传标准问答文件后，系统将按问题、答案、分类、关键词结构入库。',
+                upload: {
+                    label: '选择文件',
+                    accept: '.xls,.xlsx,.csv',
+                    multiple: true,
+                    icon: 'fa-solid fa-file-excel',
+                    title: '点击选择 FAQ 问答对文件',
+                    desc: '支持 xls、xlsx、csv 格式。右上角可下载标准模板。'
+                },
+                templateButton: true
+            },
+            email: {
+                title: '接入外部知识库',
+                subtitle: '接入外部知识库后，可按设定频率同步页面内容并生成知识片段。',
+                fields: [
+                    { label: '知识库来源', type: 'select', options: ['飞书', 'Notion', '语雀'], default: '飞书' },
+                    { label: '知识库地址', type: 'text', placeholder: '知识库地址', required: true },
+                    { label: '授权码', type: 'password', placeholder: 'Secret', required: true },
+                    { label: '同步频率', type: 'select', options: ['实时', '每小时', '每天'], default: '每小时' }
+                ]
+            },
+            vector: {
+                title: '接入向量数据库',
+                subtitle: '接入后可在知识库文件列表中查看向量数据库，并预览已录入片段。',
+                fields: [
+                    { label: '数据库类型', type: 'select', options: ['Pinecone', 'Milvus', 'Weaviate', 'Qdrant'], default: 'Milvus' },
+                    { label: 'API Key', type: 'password', placeholder: '输入 API Key', required: true },
+                    { label: 'Endpoint URL', type: 'text', placeholder: 'https://vector.company.com', required: true },
+                    { label: '索引名称', type: 'text', placeholder: 'university-knowledge-index', required: true },
+                    { label: '向量维度', type: 'number', placeholder: '例如 1536', required: false }
+                ]
+            },
+            web: {
+                title: '添加 Web 网址',
+                subtitle: '网页抓取入库后，预览内容将展示指定百科词条的结构化内容。',
+                fields: [
+                    
+                    {
+                        label: '网页 URL',
+                        type: 'text',
+                        placeholder: '',
+                        required: true
+                    },
+                    { label: '抓取深度', type: 'select', options: ['仅当前页面', '同域名下1层', '同域名下2层'], default: '仅当前页面' }
+                ]
+            },
+            api: {
+                title: '自定义 API 接入',
+                subtitle: '配置企业内部 API 后，可将返回结果写入知识库检索链路。',
+                fields: [
+                    { label: 'API 名称', type: 'text', placeholder: '例如：内部搜索服务', required: true },
+                    { label: '请求 URL', type: 'text', placeholder: 'https://api.company.com/v1/query', required: true },
+                    { label: '认证方式', type: 'select', options: ['API Key (Header)', 'Bearer Token', 'Basic Auth', '无需认证'], default: 'API Key (Header)' },
+                    { label: 'API Key / Token', type: 'password', placeholder: '根据认证方式填写', required: false },
+                    { label: '返回数据路径', type: 'text', placeholder: 'response.data.items（JSONPath）', required: false }
+                ]
+            }
+        };
+
+        function connectCard(el) {
+            const type = el.dataset.type || 'vector';
+            openConfigModal(type);
+        }
+
+        function showAPIConfig() {
+            openConfigModal('api');
+        }
+
+        function openConfigModal(type) {
+            currentConfigType = type;
+            const template = configTemplates[type];
+
+            if (!template) {
+                showToast('未知接入类型', 2000);
+                return;
+            }
+
+            document.getElementById('modal-title').textContent = template.title;
+            document.getElementById('modal-subtitle').textContent = template.subtitle || '';
+            document.getElementById('faq-template-btn').classList.toggle('hidden', !template.templateButton);
+
+            const container = document.getElementById('config-fields');
+
+            if (template.upload) {
+                container.innerHTML = renderUploadFields(template.upload);
+            } else {
+                container.innerHTML = template.fields.map(field => renderConfigField(field)).join('');
+            }
+
+            document.getElementById('config-modal').classList.remove('hidden');
+        }
+
+        function renderConfigField(field) {
+            let inputHtml = '';
+
+            if (field.type === 'select') {
+                const options = field.options.map(opt => `<option value="${escapeHTML(opt)}" ${opt === field.default ? 'selected' : ''}>${escapeHTML(opt)}</option>`).join('');
+                inputHtml = `<select class="w-full bg-gray-100 border-0 rounded-3xl px-5 py-3 focus:ring-2 focus:ring-blue-300 text-sm">${options}</select>`;
+            } else {
+                inputHtml = `<input type="${escapeHTML(field.type)}" placeholder="${escapeHTML(field.placeholder || '')}" ${field.required ? 'required' : ''} class="w-full bg-gray-100 border-0 rounded-3xl px-5 py-3 focus:ring-2 focus:ring-blue-300 text-sm">`;
+            }
+
+            return `
+                <div class="field-group" data-label="${escapeHTML(field.label)}">
+                    <label class="block text-sm font-medium mb-2">${escapeHTML(field.label)}${field.required ? ' <span class="text-red-500">*</span>' : ''}</label>
+                    ${inputHtml}
+                </div>
+            `;
+        }
+
+        function renderUploadFields(upload) {
+            return `
+                <div class="field-group" data-label="${escapeHTML(upload.label)}">
+                    <label class="block text-sm font-medium mb-3">${escapeHTML(upload.label)} <span class="text-red-500">*</span></label>
+
+                    <label class="upload-zone rounded-3xl p-8 flex flex-col items-center justify-center text-center cursor-pointer">
+                        <input type="file" accept="${escapeHTML(upload.accept)}" ${upload.multiple ? 'multiple' : ''} class="hidden" onchange="renderSelectedFiles(this)">
+                        <div class="w-16 h-16 bg-blue-600 text-white rounded-3xl flex items-center justify-center text-3xl shadow-lg mb-5">
+                            <i class="${escapeHTML(upload.icon)}"></i>
+                        </div>
+                        <div class="text-lg font-semibold text-gray-900">${escapeHTML(upload.title)}</div>
+                        <div class="text-sm text-gray-500 mt-3 leading-7 max-w-xl">${escapeHTML(upload.desc)}</div>
+                        <div class="mt-5 px-5 py-2 bg-white border border-blue-100 text-blue-600 rounded-3xl text-sm font-medium">
+                            选择文件
+                        </div>
+                    </label>
+
+                    <div id="selected-files-list" class="mt-4 space-y-3"></div>
+
+                    <div class="grid grid-cols-3 gap-4 mt-6">
+                        <div class="rounded-3xl bg-white border border-gray-100 p-4">
+                            <div class="text-xs text-gray-400">解析方式</div>
+                            <div class="font-medium mt-1">自动识别结构</div>
+                        </div>
+
+                        <div class="rounded-3xl bg-white border border-gray-100 p-4">
+                            <div class="text-xs text-gray-400">入库流程</div>
+                            <div class="font-medium mt-1">切分后写入</div>
+                        </div>
+
+                        <div class="rounded-3xl bg-white border border-gray-100 p-4">
+                            <div class="text-xs text-gray-400">单文件上限</div>
+                            <div class="font-medium mt-1">20MB</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSelectedFiles(input) {
+            const list = document.getElementById('selected-files-list');
+
+            if (!list) return;
+
+            const files = Array.from(input.files || []);
+
+            if (!files.length) {
+                list.innerHTML = '';
+                return;
+            }
+
+            list.innerHTML = files.map(file => {
+                const size = bytesToSize(file.size);
+
+                return `
+                    <div class="flex items-center justify-between rounded-2xl bg-white border border-gray-100 px-4 py-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <i class="fa-solid fa-file-lines text-blue-500"></i>
+                            <div class="truncate">
+                                <div class="text-sm font-medium truncate">${escapeHTML(file.name)}</div>
+                                <div class="text-xs text-gray-400">${escapeHTML(size)}</div>
+                            </div>
+                        </div>
+                        <span class="text-xs text-green-600 font-medium">已选择</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function downloadFAQTemplate() {
+            const rows = [
+                ['问题', '答案', '分类', '关键词'],
+                ['如何申请校园卡补办？', '登录校园服务平台提交补办申请，完成缴费后到指定服务窗口领取新卡。', '校园服务', '校园卡;补办;学生服务'],
+                ['图书馆电子资源如何校外访问？', '通过学校统一身份认证登录 VPN 或图书馆远程访问系统后即可使用。', '图书馆', '电子资源;远程访问;VPN'],
+                ['选课冲突如何处理？', '先在教务系统查看可替代课程，仍无法解决时联系学院教学秘书登记处理。', '教务管理', '选课;冲突;教务系统']
+            ];
+
+            const table = rows.map(row => '<tr>' + row.map(cell => `<td>${escapeHTML(cell)}</td>`).join('') + '</tr>').join('');
+            const htmlContent = `<html><head><meta charset="UTF-8"></head><body><table>${table}</table></body></html>`;
+            const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const link = document.createElement('a');
+
+            link.href = URL.createObjectURL(blob);
+            link.download = 'FAQ模板.xls';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(link.href);
+        }
+
+        function closeConfigModal() {
+            document.getElementById('config-modal').classList.add('hidden');
+        }
+
+        function confirmConfig() {
+            const container = document.getElementById('config-fields');
+            const inputs = container.querySelectorAll('input, select');
+            const configData = {};
+
+            inputs.forEach((input, idx) => {
+                const fieldGroup = input.closest('.field-group');
+                const label = fieldGroup?.dataset?.label || '字段' + idx;
+
+                if (input.type === 'file') {
+                    // 核心修复：这里必须保存原始 File 对象，否则无法预览真实内容
+                    configData[label] = Array.from(input.files || []);
+                } else {
+                    configData[label] = input.value;
+                }
+            });
+
+            if (pendingAddFromKB && currentKBId) {
+                addConfiguredKnowledge(configData);
+            } else {
+                closeConfigModal();
+                showToast(`${configTemplates[currentConfigType].title} 配置完成，开始同步`, 3000);
+            }
+        }
+
+        function addConfiguredKnowledge(configData) {
+            const kb = knowledgeBases[currentKBId];
+            const addedIndexes = [];
+
+            if (currentConfigType === 'document') {
+                const files = configData['选择文件'] || [];
+
+                if (!files.length) {
+                    showToast('请先选择要上传的文档', 2200);
+                    return;
+                }
+
+                files.forEach(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+
+                    const newFile = {
+                        id: Date.now() + Math.random(),
+                        name: file.name,
+                        type: ext,
+                        size: bytesToSize(file.size),
+                        status: '解析中',
+
+                        // 核心修复：保存真实上传文件
+                        localFile: file,
+                        objectUrl: ''
+                    };
+
+                    kb.files.push(newFile);
+                    addedIndexes.push(kb.files.length - 1);
+                });
+            } else if (currentConfigType === 'faq') {
+                const files = configData['选择文件'] || [];
+
+                if (!files.length) {
+                    showToast('请先选择 FAQ 问答对文件', 2200);
+                    return;
+                }
+
+                files.forEach(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+
+                    const newFile = {
+                        id: Date.now() + Math.random(),
+                        name: file.name,
+                        type: 'faq',
+                        rawType: ext,
+                        size: bytesToSize(file.size),
+                        status: '解析中',
+
+                        // 核心修复：保存真实上传文件
+                        localFile: file,
+                        objectUrl: ''
+                    };
+
+                    kb.files.push(newFile);
+                    addedIndexes.push(kb.files.length - 1);
+                });
+            } else if (currentConfigType === 'web') {
+                const url = configData['网页 URL'];
+                const title = configData['网页标题（可选）'] || '科大讯飞股份有限公司';
+
+                if (!url) {
+                    showToast('请输入网页 URL', 2200);
+                    return;
+                }
+
+                const newFile = {
+                    id: Date.now() + Math.random(),
+                    name: title,
+                    type: 'url',
+                    size: '',
+                    status: '解析中',
+                    sourceUrl: url
+                };
+
+                kb.files.push(newFile);
+                addedIndexes.push(kb.files.length - 1);
+            } else if (currentConfigType === 'vector') {
+                const dbType = configData['数据库类型'] || 'Milvus';
+                const indexName = configData['索引名称'] || 'university-knowledge-index';
+
+                const newFile = {
+                    id: Date.now() + Math.random(),
+                    name: `${dbType}: ${indexName}`,
+                    type: 'vector',
+                    size: '20 条片段',
+                    status: '解析中',
+                    vectorProvider: dbType,
+                    vectorIndex: indexName
+                };
+
+                kb.files.push(newFile);
+                addedIndexes.push(kb.files.length - 1);
+            } else {
+                const name = configData['Notion API Token'] ? 'Notion: ' + (configData['数据库 ID'] || '') :
+                             configData['邮箱地址'] ? 'Email: ' + configData['邮箱地址'] :
+                             configData['API 名称'] ? 'API: ' + configData['API 名称'] :
+                             '接入: ' + currentConfigType;
+
+                const newFile = {
+                    id: Date.now() + Math.random(),
+                    name,
+                    type: 'doc',
+                    size: '-',
+                    status: '解析中'
+                };
+
+                kb.files.push(newFile);
+                addedIndexes.push(kb.files.length - 1);
+            }
+
+            addedIndexes.forEach(idx => {
+                setTimeout(() => {
+                    if (knowledgeBases[currentKBId] && knowledgeBases[currentKBId].files[idx]) {
+                        knowledgeBases[currentKBId].files[idx].status = '已解析';
+                        renderFileGrid();
+                        renderKBTable();
+                    }
+                }, 1000);
+            });
+
+            renderFileGrid();
+            renderKBTable();
+
+            pendingAddFromKB = false;
+            closeConfigModal();
+
+            showToast(`已向知识库「${kb.name}」添加 ${addedIndexes.length} 项知识，正在解析...`, 3000);
+
+            document.querySelectorAll('[id^="tab-"]').forEach(tab => tab.classList.add('hidden'));
+            document.getElementById('tab-1').classList.remove('hidden');
+
+            document.getElementById('kb-list-view').classList.add('hidden');
+            document.getElementById('kb-detail-view').classList.remove('hidden');
+
+            document.querySelectorAll('[id^="nav-"]').forEach(nav => nav.classList.remove('active', 'bg-gray-100', 'font-medium'));
+            document.getElementById('nav-1').classList.add('active', 'bg-gray-100', 'font-medium');
+
+            document.getElementById('external-context').innerText = '';
+        }
+
+        function connectNewSource() {
+            pendingAddFromKB = false;
+            switchTab(3);
+            document.getElementById('external-context').innerText = '';
+        }
+
+        // ==================== 全局搜索 ====================
+        function handleGlobalSearch() {
+            const val = document.getElementById('global-search').value.trim();
+
+            if (val) {
+                showToast(`正在全局搜索：${val}`, 1800);
+                setTimeout(() => switchTab(2), 500);
+            }
+        }
+
+        // ==================== 退出 ====================
+        function logout() {
+            if (confirm('确定要退出系统吗？')) {
+                window.location.reload();
+            }
+        }
+
+        // ==================== 页面卸载时释放本地文件 URL ====================
+        window.addEventListener('beforeunload', () => {
+            Object.values(knowledgeBases).forEach(kb => {
+                kb.files.forEach(file => {
+                    if (file.objectUrl) {
+                        URL.revokeObjectURL(file.objectUrl);
+                    }
+                });
+            });
+        });
+
+        // ==================== 初始化 ====================
+        window.onload = () => {
+            renderKBTable();
+            switchTab(0);
+
+            setTimeout(() => {
+                showToast('欢迎使用企业知识库系统', 2200);
+            }, 800);
+        };
+    </script>
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;1c1c7799c54e46349cc23295b5e08299&quot;,&quot;server_timing&quot;:{&quot;name&quot;:{&quot;cfCacheStatus&quot;:true,&quot;cfEdge&quot;:true,&quot;cfExtPri&quot;:true,&quot;cfL4&quot;:true,&quot;cfOrigin&quot;:true,&quot;cfSpeedBrain&quot;:true},&quot;location_startswith&quot;:null}}" crossorigin="anonymous"></script>
+
+<div id="screenity-ui"><div class="screenity-shadow-dom"><div><div class="screenity-scrollbar"></div><div class="screenity-scrollbar"></div></div><style type="text/css">
+			#screenity-ui, #screenity-ui div {
+				background-color: unset;
+				padding: unset;
+				width: unset;
+				box-shadow: unset;
+				display: unset;
+				margin: unset;
+				border-radius: unset;
+			}
+			.screenity-outline {
+				position: absolute;
+				z-index: 99999999999;
+				border: 2px solid #3080F8;
+				outline-offset: -2px;
+				pointer-events: none;
+				border-radius: 5px!important;
+			}
+		.screenity-blur {
+			filter: blur(10px)!important;
+		}
+			.screenity-shadow-dom * {
+				transition: unset;
+			}
+			.screenity-shadow-dom .TooltipContent {
+  border-radius: 30px!important;
+	background-color: #29292F!important;
+  padding: 10px 15px!important;
+  font-size: 12px;
+	margin-bottom: 10px!important;
+	bottom: 100px;
+  line-height: 1;
+	font-family: 'Satoshi-Medium', sans-serif;
+	z-index: 99999999!important;
+  color: #FFF;
+  box-shadow: hsl(206 22% 7% / 35%) 0px 10px 38px -10px, hsl(206 22% 7% / 20%) 0px 10px 20px -15px!important;
+  user-select: none;
+	transition: opacity 0.3 ease-in-out;
+  will-change: transform, opacity;
+	animation-duration: 400ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.screenity-shadow-dom .hide-tooltip {
+	display: none!important;
+}
+
+.screenity-shadow-dom .tooltip-tall {
+	margin-bottom: 20px;
+}
+
+.screenity-shadow-dom .tooltip-small {
+	margin-bottom: 5px;
+}
+
+.screenity-shadow-dom .TooltipContent[data-state='delayed-open'][data-side='top'] {
+	animation-name: screenity-slideDownAndFade;
+}
+.screenity-shadow-dom .TooltipContent[data-state='delayed-open'][data-side='right'] {
+  animation-name: screenity-slideLeftAndFade;
+}
+.screenity-shadow-dom.TooltipContent[data-state='delayed-open'][data-side='bottom'] {
+  animation-name: screenity-slideUpAndFade;
+}
+.screenity-shadow-dom.TooltipContent[data-state='delayed-open'][data-side='left'] {
+  animation-name: screenity-slideRightAndFade;
+}
+
+@keyframes screenity-slideUpAndFade {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes screenity-slideRightAndFade {
+  from { opacity: 0; transform: translateX(-2px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes screenity-slideDownAndFade {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes screenity-slideLeftAndFade {
+  from { opacity: 0; transform: translateX(2px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+#screenity-ui [data-radix-popper-content-wrapper] { z-index: 999999999999!important; }
+
+.screenity-shadow-dom .CanvasContainer {
+	position: fixed;
+	pointer-events: all!important;
+	top: 0px!important;
+	left: 0px!important;
+	z-index: 99999999999!important;
+}
+.screenity-shadow-dom .canvas {
+	position: fixed;
+	top: 0px!important;
+	left: 0px!important;
+	z-index: 99999999999!important;
+	background: transparent!important;
+}
+.screenity-shadow-dom .canvas-container {
+	top: 0px!important;
+	left: 0px!important;
+	z-index: 99999999999;
+	position: fixed!important;
+	background: transparent!important;
+}
+
+.ScreenityDropdownMenuContent {
+	z-index: 99999999999!important;
+  min-width: 200px;
+  background-color: white;
+  margin-top: 4px;
+  margin-right: 8px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-radius: 15px;
+  font-family: 'Satoshi-Medium', sans-serif;
+  color: #29292F;
+  box-shadow: 0px 10px 38px -10px rgba(22, 23, 24, 0.35),
+    0px 10px 20px -15px rgba(22, 23, 24, 0.2);
+  animation-duration: 400ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+.ScreenityDropdownMenuContent[data-side="top"] {
+  animation-name: screenity-slideDownAndFade;
+}
+.ScreenityDropdownMenuContent[data-side="right"] {
+  animation-name: screenity-slideLeftAndFade;
+}
+.ScreenityDropdownMenuContent[data-side="bottom"] {
+  animation-name: screenity-slideUpAndFade;
+}
+.ScreenityDropdownMenuContent[data-side="left"] {
+  animation-name: screenity-slideRightAndFade;
+}
+.ScreenityItemIndicator {
+  position: absolute;
+  right: 12px;
+  width: 18px;
+  height: 18px;
+  background: #3080F8;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ScreenityDropdownMenuItem,
+.ScreenityDropdownMenuRadioItem {
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 5px;
+  position: relative;
+  padding-left: 22px;
+  padding-right: 22px;
+  user-select: none;
+  outline: none;
+}
+.ScreenityDropdownMenuItem:hover {
+    background-color: #F6F7FB !important;
+    cursor: pointer;
+}
+.ScreenityDropdownMenuItem[data-disabled] {
+  color: #6E7684 !important;
+  cursor: not-allowed;
+  background-color: #F6F7FB !important;
+}
+
+</style></div></div><div id="__FEISHU_CLIPPER__"></div><a id="bottomBar" style="position: fixed; bottom: -40px; left: 0px; z-index: 9999; transform: translateX(-50%); background-color: transparent; border-radius: 5px 5px 0px 0px; opacity: 0.3; padding: 5px; transition: 0.3s; cursor: pointer; max-height: 100px; max-width: 45px;"><img src="chrome-extension://kobncfkmjelbefaoohoblamnbackjggk/icon/icon_32.png" style="width: 32px; height: 32px;"></a><div class="glasp-extension-toaster" style="display: block; width: 320px; margin: unset; padding: unset; border: unset; border-radius: unset; outline: unset; background-color: unset; box-shadow: unset; position: fixed; top: 40px; right: 24px; z-index: 9999;"></div><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1c1c7799c54e46349cc23295b5e08299","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body><div class="glasp-extension" style="display: block; width: unset; margin: unset; padding: unset; border: unset; border-radius: unset; outline: unset; background-color: unset; box-shadow: unset; position: fixed; bottom: 16px; right: 16px; z-index: 9999;"><div class="glasp-extension" style="font-family: inherit;"></div></div><div id="immersive-translate-browser-popup" style="all: initial"></div></html>
