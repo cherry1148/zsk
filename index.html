@@ -1,7 +1,7 @@
 <html lang="zh-CN" data-immersive-translate-page-theme="light"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>星枢知识库</title>
+    <title>讯飞星枢知识库</title>
     <link rel="icon" href="https://appsquare-szjz.jyyun.com/apphelper/static/standard/basic-favicon.ico">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -57,6 +57,7 @@
         .type-tag-faq { background: #fef3c7; color: #b45309; }
         .type-tag-xls { background: #dcfce7; color: #15803d; }
         .type-tag-ppt { background: #ffedd5; color: #ea580c; }
+        .type-tag-external-policy { background: #e0e7ff; color: #4f46e5; }
         .type-tag-default { background: #f3f4f6; color: #6b7280; }
 
         .modal-glow {
@@ -274,7 +275,7 @@
                 <div class="flex items-center gap-3">
                     <img data-v-0df93de2="" class="logo" src="https://appsquare-szjz.jyyun.com/apphelper/static/standard/basic-app-logo.png" alt="LOGO" style="width: 50px; height: auto;">
                     <div>
-                        <h1 class="text-2xl font-semibold tracking-tight">星枢知识库</h1>
+                        <h6 class="text-lg font-semibold tracking-tight">讯飞星枢知识库</h6>
                         <p class="text-xs text-gray-500">智能知识管理平台</p>
                     </div>
                 </div>
@@ -550,7 +551,7 @@
 
                 <div onclick="connectCard(this)" data-type="email" class="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-3xl p-6 text-center cursor-pointer transition">
                     <i class="fa-solid fa-envelope text-5xl mb-4 text-orange-500"></i>
-                    <div class="font-medium">外部知识库</div>
+                    <div class="font-medium">外部制度库</div>
                     <div class="text-sm text-gray-500 mt-1">飞书/Notion/语雀</div>
                 </div>
 
@@ -1357,6 +1358,7 @@ function chunkDocument(text) {
             if (t === 'faq') return 'type-tag-faq';
             if (t === 'xls' || t === 'xlsx' || t === 'csv') return 'type-tag-xls';
             if (t === 'ppt' || t === 'pptx') return 'type-tag-ppt';
+            if (t === 'external_policy' || t === 'external-policy' || t === 'external') return 'type-tag-external-policy';
             return 'type-tag-default';
         }
 
@@ -1370,6 +1372,7 @@ function chunkDocument(text) {
             if (t === 'faq') return 'fa-solid fa-circle-question text-amber-500';
             if (t === 'xls' || t === 'xlsx' || t === 'csv') return 'fa-solid fa-file-excel text-green-600';
             if (t === 'ppt' || t === 'pptx') return 'fa-solid fa-file-powerpoint text-orange-500';
+            if (t === 'external_policy' || t === 'external-policy' || t === 'external') return 'fa-solid fa-plug-circle-bolt text-indigo-500';
             if (['jpg', 'jpeg', 'png', 'bmp', 'gif', 'webp'].includes(t)) return 'fa-solid fa-file-image text-pink-500';
             if (['json', 'jsonl'].includes(t)) return 'fa-solid fa-code text-slate-500';
             return 'fa-solid fa-file text-gray-500';
@@ -1382,6 +1385,7 @@ function chunkDocument(text) {
             if (t === 'faq') return 'FAQ';
             if (t === 'md') return 'MD';
             if (t === 'ppt' || t === 'pptx') return 'PPT';
+            if (t === 'external_policy' || t === 'external-policy' || t === 'external') return '外部制度库';
             return t ? t.toUpperCase() : 'FILE';
         }
 
@@ -1595,6 +1599,8 @@ function chunkDocument(text) {
                     contentArea.innerHTML = renderPresetMarkdownPreview(file);
                 } else if (previewType === 'ppt' || previewType === 'pptx') {
                     contentArea.innerHTML = renderPresetPowerPointPreview(file);
+                } else if (previewType === 'external_policy' || previewType === 'external-policy' || previewType === 'external') {
+                    contentArea.innerHTML = renderExternalPolicyPreview(file);
                 } else {
                     contentArea.innerHTML = renderGenericFilePreview(file);
                 }
@@ -2514,6 +2520,79 @@ function chunkDocument(text) {
             `;
         }
 
+        function renderExternalPolicyPreview(file) {
+    const items = [
+        { kind: '文件夹', name: '版本日志', icon: 'fa-solid fa-folder', color: 'text-amber-500', bg: 'bg-amber-50' },
+        { kind: '文件夹', name: '操作手册', icon: 'fa-solid fa-folder', color: 'text-amber-500', bg: 'bg-amber-50' },
+        { kind: '文件夹', name: '实操案例', icon: 'fa-solid fa-folder', color: 'text-amber-500', bg: 'bg-amber-50' },
+        { kind: 'Excel 文件', name: '线上应用清单', icon: 'fa-solid fa-file-excel', color: 'text-green-600', bg: 'bg-green-50' },
+        { kind: 'Word 文件', name: '产品操作手册', icon: 'fa-solid fa-file-word', color: 'text-blue-500', bg: 'bg-blue-50' }
+    ];
+
+    const rows = items.map((item, idx) => `
+        <tr>
+            <td class="text-gray-400 w-14">${idx + 1}</td>
+            <td>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl ${item.bg} flex items-center justify-center">
+                        <i class="${item.icon} ${item.color}"></i>
+                    </div>
+                    <div>
+                        <div class="font-medium text-gray-900">${escapeHTML(item.name)}</div>
+                        <div class="text-xs text-gray-400 mt-1">${escapeHTML(item.kind)}</div>
+                    </div>
+                </div>
+            </td>
+            <td><span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-2xl text-xs">已接入</span></td>
+            <td class="text-gray-500">外部制度库同步内容</td>
+        </tr>
+    `).join('');
+
+    // 删除 cards 的定义
+
+    return `
+        ${renderPreviewMeta(file)}
+
+        <div class="space-y-6">
+            <div class="preview-section-card bg-gradient-to-br from-indigo-50 to-white">
+                <div class="flex items-start justify-between gap-6">
+                    <div>
+                        <div class="text-sm text-indigo-600 font-medium">外部制度库内容预览</div>
+                        <h4 class="text-2xl font-semibold mt-2">${escapeHTML(file.name)}</h4>
+                        <p class="text-gray-500 mt-2">来源：${escapeHTML(file.externalSource || '飞书')}　同步频率：${escapeHTML(file.syncFrequency || '每小时')}　内容数量：5 项</p>
+                    </div>
+
+                    <div class="w-16 h-16 rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-3xl shadow-lg flex-shrink-0">
+                        <i class="fa-solid fa-plug-circle-bolt"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 此处删除了卡片网格的 div -->
+
+            <div class="preview-section-card">
+                <h5 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ul text-indigo-500"></i>文件列表
+                </h5>
+
+                <div class="overflow-auto subtle-scroll">
+                    <table class="preview-table w-full text-sm min-w-[780px]">
+                        <thead>
+                            <tr>
+                                <th class="text-left w-14">#</th>
+                                <th class="text-left">名称</th>
+                                <th class="text-left w-28">状态</th>
+                                <th class="text-left w-48">说明</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
         function renderGenericFilePreview(file) {
             return `
                 ${renderPreviewMeta(file)}
@@ -2665,8 +2744,8 @@ function chunkDocument(text) {
                 templateButton: true
             },
             email: {
-                title: '接入外部知识库',
-                subtitle: '接入外部知识库后，可按设定频率同步页面内容并生成知识片段。',
+                title: '接入外部制度库',
+                subtitle: '接入外部制度库后，可按设定频率同步文件夹与文件内容并生成知识片段。',
                 fields: [
                     { label: '知识库来源', type: 'select', options: ['飞书', 'Notion', '语雀'], default: '飞书' },
                     { label: '知识库地址', type: 'text', placeholder: '知识库地址', required: true },
@@ -2977,6 +3056,20 @@ function chunkDocument(text) {
 
                 kb.files.push(newFile);
                 addedIndexes.push(kb.files.length - 1);
+            } else if (currentConfigType === 'email') {
+                const newFile = {
+                    id: Date.now() + Math.random(),
+                    name: '飞书：讯飞智能应用创编平台知识库',
+                    type: 'external_policy',
+                    size: '5 项内容',
+                    status: '解析中',
+                    externalSource: configData['知识库来源'] || '飞书',
+                    syncFrequency: configData['同步频率'] || '每小时',
+                    sourceUrl: configData['知识库地址'] || ''
+                };
+
+                kb.files.push(newFile);
+                addedIndexes.push(kb.files.length - 1);
             } else {
                 const name = configData['Notion API Token'] ? 'Notion: ' + (configData['数据库 ID'] || '') :
                              configData['邮箱地址'] ? 'Email: ' + configData['邮箱地址'] :
@@ -3246,4 +3339,5 @@ function chunkDocument(text) {
 }
 
 </style></div></div><div id="__FEISHU_CLIPPER__"></div><a id="bottomBar" style="position: fixed; bottom: -40px; left: 0px; z-index: 9999; transform: translateX(-50%); background-color: transparent; border-radius: 5px 5px 0px 0px; opacity: 0.3; padding: 5px; transition: 0.3s; cursor: pointer; max-height: 100px; max-width: 45px;"><img src="chrome-extension://kobncfkmjelbefaoohoblamnbackjggk/icon/icon_32.png" style="width: 32px; height: 32px;"></a><div class="glasp-extension-toaster" style="display: block; width: 320px; margin: unset; padding: unset; border: unset; border-radius: unset; outline: unset; background-color: unset; box-shadow: unset; position: fixed; top: 40px; right: 24px; z-index: 9999;"></div><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1c1c7799c54e46349cc23295b5e08299","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1c1c7799c54e46349cc23295b5e08299","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body><div class="glasp-extension" style="display: block; width: unset; margin: unset; padding: unset; border: unset; border-radius: unset; outline: unset; background-color: unset; box-shadow: unset; position: fixed; bottom: 16px; right: 16px; z-index: 9999;"><div class="glasp-extension" style="font-family: inherit;"></div></div><div id="immersive-translate-browser-popup" style="all: initial"></div></html>
